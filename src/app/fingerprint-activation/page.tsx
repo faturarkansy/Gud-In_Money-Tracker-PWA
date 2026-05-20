@@ -12,7 +12,22 @@ export default function FingerprintActivationPage() {
   const supabase = createClient();
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState<any>(null);
-  const [isRegistered, setIsRegistered] = useState(false); // 🌟 State baru untuk cek status data di DB
+  const [isRegistered, setIsRegistered] = useState(false);
+
+  // Fungsi pembantu untuk memvalidasi status biometrik di database
+  const checkBiometricStatus = async (userId: string) => {
+    const { data, error } = await supabase
+      .from("user_biometrics")
+      .select("id")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (data && !error) {
+      setIsRegistered(true);
+    } else {
+      setIsRegistered(false);
+    }
+  };
 
   useEffect(() => {
     const checkUserAndBiometrics = async () => {
@@ -26,17 +41,7 @@ export default function FingerprintActivationPage() {
       }
 
       setUser(user);
-
-      // 🌟 Ambil status data: Apakah user ini sudah terdaftar di tabel biometrik?
-      const { data, error } = await supabase
-        .from("user_biometrics")
-        .select("id")
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      if (data && !error) {
-        setIsRegistered(true); // Jika ada data, ubah state menjadi true (Tampilan Update)
-      }
+      await checkBiometricStatus(user.id);
     };
 
     checkUserAndBiometrics();
@@ -69,7 +74,11 @@ export default function FingerprintActivationPage() {
             name: user.email || "user@gudin.id",
             displayName: user.user_metadata?.full_name || "User Gud In",
           },
-          pubKeyCredParams: [{ alg: -7, type: "public-key" }],
+          // 🌟 PERBAIKAN: Menyediakan dua parameter algoritma standar (ES256 & RS256) untuk hilangkan warning kuning
+          pubKeyCredParams: [
+            { alg: -7, type: "public-key" }, // ES256
+            { alg: -257, type: "public-key" }, // RS256
+          ],
           authenticatorSelection: {
             authenticatorAttachment: "platform",
             userVerification: "required",
@@ -96,23 +105,28 @@ export default function FingerprintActivationPage() {
         String.fromCharCode(...new Uint8Array(response.attestationObject)),
       );
 
-      // 🌟 PERUBAHAN UTAMA: Menggunakan .upsert() agar otomatis mengupdate jika user_id sudah ada
+      // Operasi aman simpan atau overwrite data biometrik lewat kombinasi .upsert()
       const { error: dbError } = await supabase.from("user_biometrics").upsert(
         {
           user_id: user.id,
           credential_id: credentialId,
           public_key: publicKey,
         },
-        { onConflict: "user_id" }, // Jika kolom user_id bentrok/sudah ada, lakukan update data
+        { onConflict: "user_id" },
       );
 
-      if (dbError) throw new Error(dbError.message);
+      if (dbError) {
+        throw new Error(`Gagal sinkronisasi database: ${dbError.message}`);
+      }
 
       alert(
         isRegistered
           ? "Sidik Jari Keamanan Berhasil Diperbarui!"
           : "Aktivasi Sidik Jari Berhasil Terdaftar sebagai Kunci Utama!",
       );
+
+      // SINKRONISASI INSTAN: Paksa perbarui state lokal agar UI langsung sinkron tanpa perlu refresh manual
+      await checkBiometricStatus(user.id);
 
       router.push(ROUTES.HOME);
     } catch (error: any) {
@@ -159,7 +173,6 @@ export default function FingerprintActivationPage() {
         </div>
 
         <div className="z-10 w-full flex items-center justify-between mt-auto pt-6 mb-4">
-          {/* 🌟 PERUBAHAN KONDISIONAL TOMBOL: Merubah teks berdasarkan kondisi state isRegistered */}
           <button
             onClick={handleActivation}
             disabled={loading}
