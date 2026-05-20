@@ -4,7 +4,13 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Mail, ShieldAlert, Calendar } from "lucide-react";
+import {
+  ArrowLeft,
+  Mail,
+  ShieldAlert,
+  Calendar,
+  Fingerprint,
+} from "lucide-react"; // Menambahkan ikon Fingerprint
 import { ROUTES } from "@/utils/routes";
 
 export default function ProfilePage() {
@@ -52,8 +58,8 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen w-full bg-gray-100 flex items-center justify-center p-0 sm:p-4">
-      {/* Bingkai Utama Mockup Handphone */}
-      <div className="relative w-full max-w-md min-h-screen sm:min-h-[90vh] sm:rounded-[40px] sm:shadow-2xl bg-[#FCFCF9] overflow-hidden p-6 sm:p-8 flex flex-col justify-between">
+      {/* Bingkai Utama Mockup Handphone (Sudah menggunakan sm:min-h-screen) */}
+      <div className="relative w-full max-w-md min-h-screen sm:min-h-screen sm:rounded-[40px] sm:shadow-2xl bg-[#FCFCF9] overflow-hidden p-6 sm:p-8 flex flex-col justify-between">
         {/* Lingkaran dekoratif latar belakang */}
         <div
           className="absolute right-[-30%] bottom-[5%] w-[450px] h-[450px] rounded-full pointer-events-none"
@@ -145,6 +151,30 @@ export default function ProfilePage() {
                 </p>
               </div>
             </div>
+
+            {/* OPSI TERBARU: Tombol Menu Pengaturan Keamanan Sidik Jari */}
+            <Link
+              href={ROUTES.FINGERPRINT}
+              className="flex items-center justify-between px-5 py-4 bg-[#FEDC34]/10 border border-[#FEDC34]/20 hover:bg-[#FEDC34]/20 rounded-2xl transition-all group cursor-pointer"
+            >
+              <div className="flex items-center gap-4">
+                <Fingerprint
+                  size={20}
+                  className="text-[#ebd030] group-hover:scale-110 transition-transform"
+                />
+                <div>
+                  <p className="text-xs text-gray-400 font-medium">
+                    Keamanan Biometrik
+                  </p>
+                  <p className="text-sm font-semibold text-gray-900 mt-0.5">
+                    Aktivasi Sidik Jari
+                  </p>
+                </div>
+              </div>
+              <span className="text-xs bg-[#FEDC34] text-black font-semibold px-3 py-1 rounded-full shadow-sm">
+                Atur
+              </span>
+            </Link>
           </div>
         </div>
 

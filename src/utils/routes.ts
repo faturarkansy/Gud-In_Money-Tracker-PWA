@@ -7,6 +7,7 @@ export const ROUTES = {
   DASHBOARD: "/dashboard",
   TRANSACTION: "/transaction",
   PROFILE: "/profile",
+  FINGERPRINT: "/fingerprint-activation",
 } as const;
 
 // Menjadikan ROUTES tidak bisa diubah (read-only) untuk mencegah bug typo
