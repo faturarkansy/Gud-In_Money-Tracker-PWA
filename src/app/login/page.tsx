@@ -69,8 +69,7 @@ export default function LoginPage() {
         {
           challenge,
           rpId: window.location.hostname,
-          // 🌟 IMPLEMENTASI PERUBAHAN: Kosong berarti menyuruh HP mendeteksi Resident Key secara mandiri
-          allowCredentials: [],
+          allowCredentials: [], // HP mendeteksi Resident Key secara mandiri
           userVerification: "required",
           timeout: 60000,
         };
@@ -83,12 +82,12 @@ export default function LoginPage() {
       if (!assertion)
         throw new Error("Proses verifikasi sidik jari dibatalkan.");
 
-      // Konversi hasil token balik dari internal HP ke format base64
-      const idSidikJariScan = btoa(
-        String.fromCharCode(...new Uint8Array(assertion.rawId)),
-      );
+      // 🌟 PERUBAHAN UTAMA: Konversi ArrayBuffer rawId menjadi string Hexadecimal yang 100% stabil
+      const idSidikJariScan = Array.from(new Uint8Array(assertion.rawId))
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join("");
 
-      // Cocokkan id hasil scan dengan kolom credential_id yang tersimpan di tabel Supabase
+      // Cocokkan id hasil scan dengan kolom credential_id string Hex di tabel Supabase
       const { data: biometricData, error: dbError } = await supabase
         .from("user_biometrics")
         .select("user_id")
