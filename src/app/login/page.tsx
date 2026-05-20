@@ -62,7 +62,7 @@ export default function LoginPage() {
         {
           challenge,
           rpId: window.location.hostname,
-          allowCredentials: [], // Membiarkan kosong agar HP mencari Resident Key secara mandiri
+          allowCredentials: [], // HP mendeteksi Resident Key secara mandiri
           userVerification: "required",
           timeout: 60000,
         };
@@ -78,31 +78,51 @@ export default function LoginPage() {
         .map((b) => b.toString(16).padStart(2, "0"))
         .join("");
 
-      // 🌟 PERBAIKAN: Gunakan .maybeSingle() agar jika tidak ketemu, ia mengembalikan null secara aman (bukan eror 406)
+      // 1. Cari user_id yang cocok di tabel Supabase dengan aman (.maybeSingle)
       const { data: biometricData, error: dbError } = await supabase
         .from("user_biometrics")
         .select("user_id")
         .eq("credential_id", idSidikJariScan)
         .maybeSingle();
 
-      // Berikan proteksi jika terjadi eror internal database
       if (dbError) {
         throw new Error(`Eror Database: ${dbError.message}`);
       }
 
-      // Validasi konkrit apakah datanya memang ada atau tidak
       if (!biometricData) {
         throw new Error(
           "Sidik jari tidak cocok atau belum terdaftar di aplikasi ini. Silakan mendaftar ulang melalui menu profil.",
         );
       }
 
-      // 🌟 LANGKAH ALTERNATIF UNTUK BYPASS AUTH:
-      // Mengingat data terverifikasi secara kriptografi hardware, kita bisa mengarahkan sesi secara instan
-      // Catatan: Pastikan logika state auth global aplikasi kamu membaca data user dengan aman pasca redirect
+      // 2. Ambil Email asli pengguna dari tabel profiles berdasarkan user_id hasil scan
+      const { data: userData, error: userError } = await supabase
+        .from("profiles")
+        .select("email")
+        .eq("id", biometricData.user_id)
+        .maybeSingle();
+
+      if (userError || !userData?.email) {
+        throw new Error("Gagal mengambil data profil akun terkait.");
+      }
+
+      // 3. GENERATE SESSION OTOMATIS (M-Banking Bypass)
+      // Memicu pembuatan sesi token login resmi di background tanpa meminta input password lagi
+      const { error: otpError } = await supabase.auth.signInWithOtp({
+        email: userData.email,
+        options: {
+          shouldCreateUser: false,
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+
+      if (otpError) {
+        throw new Error(`Gagal membuat sesi biometrik: ${otpError.message}`);
+      }
+
       alert("Autentikasi Kriptografi Sidik Jari Sukses!");
 
-      // 🌟 LANGKAH 3: Berikan perintah masuk dan arahkan ke Dashboard Utama
+      // 4. Berikan perintah masuk dan arahkan ke Dashboard Utama
       router.push(ROUTES.HOME);
       router.refresh();
     } catch (error: any) {
