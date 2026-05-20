@@ -14,7 +14,6 @@ export default function FingerprintActivationPage() {
   const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
-    // Memastikan pengguna sudah login secara berkala sebelum mendaftarkan sidik jari
     const checkUser = async () => {
       const {
         data: { user },
@@ -33,7 +32,7 @@ export default function FingerprintActivationPage() {
     setLoading(true);
 
     try {
-      // 1. Cek apakah perangkat mendukung autentikasi biometrik
+      // 1. Cek dukungan sensor biometrik perangkat
       const isBiometricSupported =
         await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
       if (!isBiometricSupported) {
@@ -42,7 +41,7 @@ export default function FingerprintActivationPage() {
         );
       }
 
-      // 2. Konfigurasi kredensial kriptografi WebAuthn
+      // 2. Konfigurasi kredensial kriptografi WebAuthn dengan Resident Key
       const challenge = new Uint8Array(32);
       window.crypto.getRandomValues(challenge);
 
@@ -57,10 +56,13 @@ export default function FingerprintActivationPage() {
             name: user.email || "user@gudin.id",
             displayName: user.user_metadata?.full_name || "User Gud In",
           },
-          pubKeyCredParams: [{ alg: -7, type: "public-key" }], // ES256 algorithm
+          pubKeyCredParams: [{ alg: -7, type: "public-key" }], // Algoritma ES256
           authenticatorSelection: {
-            authenticatorAttachment: "platform", // Mengunci hanya sensor fisik internal HP/Laptop
+            authenticatorAttachment: "platform", // Mengunci pada sensor internal HP
             userVerification: "required",
+            // 🌟 IMPLEMENTASI PERUBAHAN: Set agar kunci ditanam di internal hardware HP
+            requireResidentKey: true,
+            residentKey: "required",
           },
           timeout: 60000,
         };
@@ -91,7 +93,7 @@ export default function FingerprintActivationPage() {
 
       if (dbError) throw new Error(dbError.message);
 
-      alert("Aktivasi Sidik Jari Berhasil Terdaftar!");
+      alert("Aktivasi Sidik Jari Berhasil Terdaftar sebagai Kunci Utama!");
       router.push(ROUTES.HOME);
     } catch (error: any) {
       alert(error.message || "Gagal mengaktifkan sidik jari perangkat.");

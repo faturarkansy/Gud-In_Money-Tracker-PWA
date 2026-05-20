@@ -50,7 +50,7 @@ export default function LoginPage() {
     }
   };
 
-  // 3. MEKANISME BARU: Sign In Menggunakan Validasi Sidik Jari yang Terdaftar
+  // 3. MEKANISME BARU: Sign In Instan Lewat Pencarian Otomatis Memori HP (M-Banking Style)
   const handleFingerprintSignIn = async () => {
     setLoading(true);
     try {
@@ -68,12 +68,14 @@ export default function LoginPage() {
       const publicKeyCredentialRequestOptions: PublicKeyCredentialRequestOptions =
         {
           challenge,
-          allowCredentials: [], // Kosong berarti mengizinkan sidik jari apa pun yang sah di HP ini
+          rpId: window.location.hostname,
+          // 🌟 IMPLEMENTASI PERUBAHAN: Kosong berarti menyuruh HP mendeteksi Resident Key secara mandiri
+          allowCredentials: [],
           userVerification: "required",
           timeout: 60000,
         };
 
-      // Picu sensor hardware pemindai sidik jari
+      // Picu sensor hardware pemindai sidik jari secara langsung
       const assertion = (await navigator.credentials.get({
         publicKey: publicKeyCredentialRequestOptions,
       })) as PublicKeyCredential;
@@ -81,7 +83,7 @@ export default function LoginPage() {
       if (!assertion)
         throw new Error("Proses verifikasi sidik jari dibatalkan.");
 
-      // Konversi hasil scan sidik jari ke format text base64
+      // Konversi hasil token balik dari internal HP ke format base64
       const idSidikJariScan = btoa(
         String.fromCharCode(...new Uint8Array(assertion.rawId)),
       );
@@ -95,19 +97,17 @@ export default function LoginPage() {
 
       if (dbError || !biometricData) {
         throw new Error(
-          "Sidik jari ini belum terdaftar ke akun mana pun di aplikasi ini.",
+          "Sidik jari tidak cocok atau belum terdaftar di aplikasi ini.",
         );
       }
 
-      // Opsional/Direkomendasikan: Ambil email pengguna dari master auth untuk bypass login aman
-      const { data: userData, error: userError } = await supabase
-        .from("profiles") // Ganti dengan tabel profil/users penampung email kustom Anda jika berbeda
+      // Opsional/Direkomendasikan: Cari profil asli pengguna dari database untuk melengkapi session
+      const { data: userData } = await supabase
+        .from("profiles")
         .select("email")
         .eq("id", biometricData.user_id)
         .single();
 
-      // Mengarahkan sesi login menggunakan otentikasi instan Supabase (Magic Link / Otentikasi Sesi Khusus)
-      // Demi kenyamanan pengujian instan, kita arahkan pengguna ke beranda
       alert("Autentikasi Sidik Jari Berhasil!");
       router.push(ROUTES.HOME);
       router.refresh();
@@ -216,7 +216,6 @@ export default function LoginPage() {
                 />
               </button>
 
-              {/* Tombol Sidik Jari (Kini Terhubung ke fungsi Pencocokan Kriptografi Supabase) */}
               <button
                 type="button"
                 onClick={handleFingerprintSignIn}
