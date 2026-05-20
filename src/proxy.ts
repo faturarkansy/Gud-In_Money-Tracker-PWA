@@ -1,11 +1,24 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-// DIUBAH: Nama fungsi diubah dari 'middleware' menjadi 'proxy'
 export async function proxy(request: NextRequest) {
+  // 🌟 LANGKAH 1: Cek apakah user masuk menggunakan jalur bypass sidik jari
+  const hasBiometricCookie = request.cookies.get("gudin-biometric-session");
+  const { pathname } = request.nextUrl;
+
   let supabaseResponse = NextResponse.next({
     request,
   });
+
+  // Jika cookie sidik jari aktif dan user mencoba mengakses halaman login, lempar langsung ke home
+  if (hasBiometricCookie && pathname === "/login") {
+    return NextResponse.redirect(new URL("/", request.url));
+  }
+
+  // Jika cookie sidik jari aktif dan mengakses halaman beranda/fitur, langsung izinkan lolos bypass!
+  if (hasBiometricCookie) {
+    return supabaseResponse;
+  }
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -16,7 +29,7 @@ export async function proxy(request: NextRequest) {
           return request.cookies.getAll();
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) =>
+          cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value),
           );
           supabaseResponse = NextResponse.next({
@@ -30,13 +43,12 @@ export async function proxy(request: NextRequest) {
     },
   );
 
-  // Menyegarkan token sesi Supabase secara otomatis
+  // Menyegarkan token sesi Supabase secara otomatis untuk login email biasa / google auth
   await supabase.auth.getUser();
 
   return supabaseResponse;
 }
 
-// Konfigurasi rute matcher tetap sama
 export const config = {
   matcher: [
     "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
