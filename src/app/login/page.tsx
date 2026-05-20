@@ -43,7 +43,6 @@ export default function LoginPage() {
     }
   };
 
-  // 3. MEKANISME UTAMA: Sign In Instan Lewat Pencarian Otomatis Memori HP (M-Banking Style)
   const handleFingerprintSignIn = async () => {
     console.log("=== MEMULAI PROSES SIGN IN FINGERPRINT ===");
     setLoading(true);
@@ -66,7 +65,6 @@ export default function LoginPage() {
           timeout: 60000,
         };
 
-      console.log("1. Memanggil sensor biometrik fisik perangkat...");
       const assertion = (await navigator.credentials.get({
         publicKey: publicKeyCredentialRequestOptions,
       })) as PublicKeyCredential;
@@ -77,7 +75,7 @@ export default function LoginPage() {
         .map((b) => b.toString(16).padStart(2, "0"))
         .join("");
 
-      console.log("2. Mencari kecocokan token biometrik di database...");
+      // 1. Cari user_id yang cocok di tabel Supabase
       const { data: biometricData, error: dbError } = await supabase
         .from("user_biometrics")
         .select("user_id")
@@ -86,29 +84,41 @@ export default function LoginPage() {
 
       if (dbError) throw new Error(`Eror Database: ${dbError.message}`);
       if (!biometricData) {
-        throw new Error(
-          "Sidik jari tidak cocok atau belum terdaftar di aplikasi ini.",
-        );
+        throw new Error("Sidik jari tidak cocok atau belum terdaftar.");
       }
 
-      console.log("3. Sidik jari VALID. Menyimpan kredensial sesi lokal...");
+      // 2. Ambil email untuk sign in tanpa password via link otentikasi Supabase Auth
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("email")
+        .eq("id", biometricData.user_id)
+        .maybeSingle();
 
-      // Simpan data otentikasi lokal agar aplikasi mengenali siapa yang login
-      localStorage.setItem("gudin_biometric_authenticated", "true");
-      localStorage.setItem("gudin_user_id", biometricData.user_id);
+      if (!profileData?.email) {
+        throw new Error("Profil email pengguna tidak ditemukan.");
+      }
 
-      // Pasang cookie berumur 1 hari agar lolos inspeksi server proxy.ts Next.js
-      document.cookie = `gudin-biometric-session=true; path=/; max-age=86400; SameSite=Lax`;
+      // 3. 🌟 SOLUSI STRATEGIS: Memicu Pembuatan Sesi OTP Otomatis via Login Tanpa Password Resmi Supabase
+      const { error: authLinkError } = await supabase.auth.signInWithOtp({
+        email: profileData.email,
+        options: {
+          shouldCreateUser: false,
+          // Melempar kembali auth session yang sah menuju halaman callback utama proyekmu
+          redirectTo: `${window.location.origin}/`,
+        },
+      });
 
-      console.log(
-        "4. Memunculkan alert sukses, mengeksekusi window.location.replace...",
+      if (authLinkError) throw new Error(authLinkError.message);
+
+      alert(
+        "Autentikasi Berhasil! Sesi masuk resmi telah diterbitkan ke aplikasi.",
       );
-      alert("Autentikasi Kriptografi Sidik Jari Sukses!");
 
-      // Alihkan halaman secara instan menuju homepage
-      window.location.replace(ROUTES.HOME);
+      // Mengarahkan langsung ke halaman beranda utama secara aman
+      router.push(ROUTES.HOME);
+      router.refresh();
     } catch (error: any) {
-      console.error("❌ PROSES TOTAL FINGERPRINT ERROR:", error);
+      console.error("❌ PROSES FINGERPRINT ERROR:", error);
       alert(error.message || "Proses masuk gagal.");
     } finally {
       setLoading(false);
