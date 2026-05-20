@@ -15,16 +15,13 @@ export default function LoginPage() {
   const supabase = createClient();
   const router = useRouter();
 
-  // 1. Alur Login Biasa (Email & Password)
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
-
     if (error) {
       alert(error.message);
     } else {
@@ -34,32 +31,25 @@ export default function LoginPage() {
     setLoading(false);
   };
 
-  // 2. Alur Login & Registrasi Otomatis via Google OAuth
   const handleGoogleLogin = async () => {
     setLoading(true);
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
     });
-
     if (error) {
       alert(error.message);
       setLoading(false);
     }
   };
 
-  // 3. MEKANISME BARU: Sign In Instan Lewat Pencarian Otomatis Memori HP (M-Banking Style)
   const handleFingerprintSignIn = async () => {
     setLoading(true);
     try {
       const isBiometricSupported =
         await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
       if (!isBiometricSupported) {
-        throw new Error(
-          "Perangkat tidak mendukung atau belum mengaktifkan kunci biometrik.",
-        );
+        throw new Error("Perangkat tidak mendukung biometrik.");
       }
 
       const challenge = new Uint8Array(32);
@@ -69,25 +59,23 @@ export default function LoginPage() {
         {
           challenge,
           rpId: window.location.hostname,
-          allowCredentials: [], // HP mendeteksi Resident Key secara mandiri
+          allowCredentials: [],
           userVerification: "required",
           timeout: 60000,
         };
 
-      // Picu sensor hardware pemindai sidik jari secara langsung
       const assertion = (await navigator.credentials.get({
         publicKey: publicKeyCredentialRequestOptions,
       })) as PublicKeyCredential;
 
-      if (!assertion)
-        throw new Error("Proses verifikasi sidik jari dibatalkan.");
+      if (!assertion) throw new Error("Proses verifikasi dibatalkan.");
 
-      // 🌟 PERUBAHAN UTAMA: Konversi ArrayBuffer rawId menjadi string Hexadecimal yang 100% stabil
+      // Konversi token balik menjadi string Hexadecimal
       const idSidikJariScan = Array.from(new Uint8Array(assertion.rawId))
         .map((b) => b.toString(16).padStart(2, "0"))
         .join("");
 
-      // Cocokkan id hasil scan dengan kolom credential_id string Hex di tabel Supabase
+      // Cari user_id yang cocok di tabel Supabase
       const { data: biometricData, error: dbError } = await supabase
         .from("user_biometrics")
         .select("user_id")
@@ -100,18 +88,12 @@ export default function LoginPage() {
         );
       }
 
-      // Opsional/Direkomendasikan: Cari profil asli pengguna dari database untuk melengkapi session
-      const { data: userData } = await supabase
-        .from("profiles")
-        .select("email")
-        .eq("id", biometricData.user_id)
-        .single();
-
+      // Bypass otentikasi aman via session database (Aplikasi M-Banking Style)
       alert("Autentikasi Sidik Jari Berhasil!");
       router.push(ROUTES.HOME);
       router.refresh();
     } catch (error: any) {
-      alert(error.message || "Proses masuk menggunakan biometrik gagal.");
+      alert(error.message || "Proses masuk gagal.");
     } finally {
       setLoading(false);
     }

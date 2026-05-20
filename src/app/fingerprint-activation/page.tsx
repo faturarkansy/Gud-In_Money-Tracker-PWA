@@ -12,19 +12,34 @@ export default function FingerprintActivationPage() {
   const supabase = createClient();
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState<any>(null);
+  const [isRegistered, setIsRegistered] = useState(false); // 🌟 State baru untuk cek status data di DB
 
   useEffect(() => {
-    const checkUser = async () => {
+    const checkUserAndBiometrics = async () => {
       const {
         data: { user },
       } = await supabase.auth.getUser();
+
       if (!user) {
         router.push(ROUTES.LOGIN);
-      } else {
-        setUser(user);
+        return;
+      }
+
+      setUser(user);
+
+      // 🌟 Ambil status data: Apakah user ini sudah terdaftar di tabel biometrik?
+      const { data, error } = await supabase
+        .from("user_biometrics")
+        .select("id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (data && !error) {
+        setIsRegistered(true); // Jika ada data, ubah state menjadi true (Tampilan Update)
       }
     };
-    checkUser();
+
+    checkUserAndBiometrics();
   }, [router, supabase]);
 
   const handleActivation = async () => {
@@ -32,7 +47,6 @@ export default function FingerprintActivationPage() {
     setLoading(true);
 
     try {
-      // 1. Cek dukungan sensor biometrik perangkat
       const isBiometricSupported =
         await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
       if (!isBiometricSupported) {
@@ -41,7 +55,6 @@ export default function FingerprintActivationPage() {
         );
       }
 
-      // 2. Konfigurasi kredensial kriptografi WebAuthn dengan Resident Key
       const challenge = new Uint8Array(32);
       window.crypto.getRandomValues(challenge);
 
@@ -56,47 +69,54 @@ export default function FingerprintActivationPage() {
             name: user.email || "user@gudin.id",
             displayName: user.user_metadata?.full_name || "User Gud In",
           },
-          pubKeyCredParams: [{ alg: -7, type: "public-key" }], // Algoritma ES256
+          pubKeyCredParams: [{ alg: -7, type: "public-key" }],
           authenticatorSelection: {
-            authenticatorAttachment: "platform", // Mengunci pada sensor internal HP
+            authenticatorAttachment: "platform",
             userVerification: "required",
-            // 🌟 IMPLEMENTASI PERUBAHAN: Set agar kunci ditanam di internal hardware HP
             requireResidentKey: true,
             residentKey: "required",
           },
           timeout: 60000,
         };
 
-      // 3. Picu sensor fisik sidik jari pada HP pengguna
       const credential = (await navigator.credentials.create({
         publicKey: publicKeyCredentialCreationOptions,
       })) as PublicKeyCredential;
 
       if (!credential)
-        throw new Error("Aktivasi sidik jari dibatalkan oleh pengguna.");
+        throw new Error("Proses pemindaian sidik jari dibatalkan.");
 
-      // Konversi buffer data biner menjadi format string text aman (base64) untuk database
-      const credentialId = btoa(
-        String.fromCharCode(...new Uint8Array(credential.rawId)),
-      );
+      // Konversi array biner rawId menjadi format string Hexadecimal
+      const credentialId = Array.from(new Uint8Array(credential.rawId))
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join("");
+
       const response = credential.response as AuthenticatorAttestationResponse;
       const publicKey = btoa(
         String.fromCharCode(...new Uint8Array(response.attestationObject)),
       );
 
-      // 4. Simpan Kunci Publik Kredensial Sidik Jari ke Supabase
-      const { error: dbError } = await supabase.from("user_biometrics").insert({
-        user_id: user.id,
-        credential_id: credentialId,
-        public_key: publicKey,
-      });
+      // 🌟 PERUBAHAN UTAMA: Menggunakan .upsert() agar otomatis mengupdate jika user_id sudah ada
+      const { error: dbError } = await supabase.from("user_biometrics").upsert(
+        {
+          user_id: user.id,
+          credential_id: credentialId,
+          public_key: publicKey,
+        },
+        { onConflict: "user_id" }, // Jika kolom user_id bentrok/sudah ada, lakukan update data
+      );
 
       if (dbError) throw new Error(dbError.message);
 
-      alert("Aktivasi Sidik Jari Berhasil Terdaftar sebagai Kunci Utama!");
+      alert(
+        isRegistered
+          ? "Sidik Jari Keamanan Berhasil Diperbarui!"
+          : "Aktivasi Sidik Jari Berhasil Terdaftar sebagai Kunci Utama!",
+      );
+
       router.push(ROUTES.HOME);
     } catch (error: any) {
-      alert(error.message || "Gagal mengaktifkan sidik jari perangkat.");
+      alert(error.message || "Gagal memproses data sidik jari perangkat.");
     } finally {
       setLoading(false);
     }
@@ -122,7 +142,8 @@ export default function FingerprintActivationPage() {
           </div>
 
           <h1 className="text-[44px] font-normal text-gray-900 leading-[1.1] tracking-[-0.05em] mb-4">
-            Fingerprint <br /> Activation
+            {isRegistered ? "Update" : "Fingerprint"} <br />{" "}
+            {isRegistered ? "Biometric" : "Activation"}
           </h1>
         </div>
 
@@ -138,12 +159,13 @@ export default function FingerprintActivationPage() {
         </div>
 
         <div className="z-10 w-full flex items-center justify-between mt-auto pt-6 mb-4">
+          {/* 🌟 PERUBAHAN KONDISIONAL TOMBOL: Merubah teks berdasarkan kondisi state isRegistered */}
           <button
             onClick={handleActivation}
             disabled={loading}
             className="px-10 py-4 bg-[#FEDC34] text-black font-semibold rounded-full text-base shadow-sm hover:bg-[#ebd030] active:scale-[0.97] transition-all disabled:opacity-50"
           >
-            {loading ? "Processing..." : "Activate"}
+            {loading ? "Processing..." : isRegistered ? "Update" : "Activate"}
           </button>
 
           <button
