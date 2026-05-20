@@ -47,10 +47,13 @@ export default function LoginPage() {
 
   // 3. MEKANISME UTAMA: Sign In Instan Lewat Pencarian Otomatis Memori HP (M-Banking Style)
   const handleFingerprintSignIn = async () => {
+    console.log("=== MEMULAI PROSES SIGN IN FINGERPRINT ===");
     setLoading(true);
     try {
       const isBiometricSupported =
         await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+      console.log("1. Cek dukungan hardware perangkat:", isBiometricSupported);
+
       if (!isBiometricSupported) {
         throw new Error("Perangkat tidak mendukung biometrik.");
       }
@@ -67,18 +70,22 @@ export default function LoginPage() {
           timeout: 60000,
         };
 
+      console.log("2. Memanggil sensor biometrik fisik perangkat...");
       const assertion = (await navigator.credentials.get({
         publicKey: publicKeyCredentialRequestOptions,
       })) as PublicKeyCredential;
 
       if (!assertion) throw new Error("Proses verifikasi dibatalkan.");
+      console.log("3. Hardware berhasil memverifikasi sidik jari user.");
 
       // Konversi token balik menjadi string Hexadecimal
       const idSidikJariScan = Array.from(new Uint8Array(assertion.rawId))
         .map((b) => b.toString(16).padStart(2, "0"))
         .join("");
+      console.log("4. Hasil konversi string Hex ID scan:", idSidikJariScan);
 
       // 1. Cari user_id yang cocok di tabel Supabase
+      console.log("5. Melakukan query pencarian ke tabel 'user_biometrics'...");
       const { data: biometricData, error: dbError } = await supabase
         .from("user_biometrics")
         .select("user_id, public_key")
@@ -86,8 +93,11 @@ export default function LoginPage() {
         .maybeSingle();
 
       if (dbError) {
+        console.error("❌ EROR QUERY DATABASE BIOMETRIK:", dbError);
         throw new Error(`Eror Database: ${dbError.message}`);
       }
+
+      console.log("6. Hasil query data biometrik dari DB:", biometricData);
 
       if (!biometricData) {
         throw new Error(
@@ -96,28 +106,43 @@ export default function LoginPage() {
       }
 
       // 🌟 LANGKAH 2: GENERATE AUTH SESSION SECARA PROGRAMMATIC
-      // Karena tanda tangan kriptografi hardware sukses dicocokkan, kita paksa Supabase Client
-      // membuat token status masuk agar dikenali oleh Middleware Next.js tanpa interupsi OTP.
       const fakeAccessToken = biometricData.public_key;
+      console.log("7. Menyuntikkan token otentikasi palsu ke Supabase Auth...");
 
       // Mengatur session browser lokal agar dikenali sebagai user aktif
-      const { error: sessionError } = await supabase.auth.setSession({
-        access_token: fakeAccessToken,
-        refresh_token: idSidikJariScan,
-      });
+      const { data: sessionData, error: sessionError } =
+        await supabase.auth.setSession({
+          access_token: fakeAccessToken,
+          refresh_token: idSidikJariScan,
+        });
 
-      // Pemicu alternatif aman untuk Next.js client-side routing bypass:
-      // Kita simpan flag penanda login sidik jari sementara ke localStorage agar dibaca bypass oleh middleware/layout kamu
+      if (sessionError) {
+        console.error("❌ EROR SAAT MENGATUR SESSION SUPABASE:", sessionError);
+        throw new Error(
+          `Gagal membangun sesi browser: ${sessionError.message}`,
+        );
+      }
+
+      console.log("8. Status setSession Supabase berhasil:", sessionData);
+
+      // Menyimpan flag penanda lokal
+      console.log("9. Menyimpan data kredensial pendukung ke localStorage...");
       localStorage.setItem("gudin_biometric_authenticated", "true");
       localStorage.setItem("gudin_user_id", biometricData.user_id);
 
+      console.log(
+        "10. Memunculkan alert sukses, bersiap memicu window.location.href...",
+      );
       alert("Autentikasi Kriptografi Sidik Jari Sukses!");
 
       // 🌟 LANGKAH 3: Paksa router berpindah dan lakukan hard-refresh session
+      console.log("11. Mengeksekusi perpindahan halaman menuju:", ROUTES.HOME);
       window.location.href = ROUTES.HOME;
     } catch (error: any) {
+      console.error("❌ PROSES TOTAL FINGERPRINT ERROR:", error);
       alert(error.message || "Proses masuk gagal.");
     } finally {
+      console.log("=== SELESAI EKSEKUSI BLOK FINGERPRINT ===");
       setLoading(false);
     }
   };
