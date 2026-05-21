@@ -5,7 +5,8 @@ export const ROUTES = {
   LOGIN: "/login",
   REGISTER: "/register",
   DASHBOARD: "/dashboard",
-  TRANSACTION: "/transaction",
+  TRANSACTION: "/transactions",
+  GOALS: "/goals",
   PROFILE: "/profile",
   FINGERPRINT: "/fingerprint-activation",
 } as const;

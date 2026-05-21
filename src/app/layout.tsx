@@ -1,39 +1,24 @@
-import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
-import "./globals.css";
-import OrientationGuard from "@/components/OrientationGuard"; // Jalankan detektor terpisah
-
-const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin"],
-});
-
-export const metadata: Metadata = {
-  title: "Money Tracker",
-  description: "Monitor keuangan Anda dengan mudah",
-  manifest: "/manifest.json",
-  icons: {
-    icon: "/next.svg",
-    apple: "/next.svg",
-  },
-};
-
-export const viewport: Viewport = {
-  themeColor: "#2563eb",
-};
+import "@/app/globals.css";
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
-    <html lang="en">
-      <body className={`${inter.variable} antialiased`}>
-        {children}
-
-        {/* Panggil pelindung orientasi di sini */}
-        <OrientationGuard />
+    <html lang="id">
+      <head>
+        <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
+        />
+        <title>Gud In - Money Tracker</title>
+      </head>
+      <body className="bg-[#F4F6F9]">
+        <div className="min-h-screen w-full antialiased flex flex-col justify-start items-center">
+          {/* Container Pusat Utama (Mockup Mobile Frame) */}
+          <div className="w-full min-h-screen relative">{children}</div>
+        </div>
       </body>
     </html>
   );
