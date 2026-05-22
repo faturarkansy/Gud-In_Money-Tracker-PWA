@@ -103,8 +103,8 @@ export default function LoginPage() {
         email: profileData.email,
         options: {
           shouldCreateUser: false,
-          // Melempar kembali auth session yang sah menuju halaman callback utama proyekmu
-          redirectTo: `${window.location.origin}/`,
+          // Gunakan emailRedirectTo untuk menggantikan redirectTo
+          emailRedirectTo: `${window.location.origin}/`,
         },
       });
 
