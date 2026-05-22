@@ -146,7 +146,7 @@ export default function FingerprintActivationPage() {
         <div className="z-10 w-full">
           <div className="flex items-center gap-2 mb-12">
             <img
-              src="/Logo.png"
+              src="/logo/Logo.png"
               alt="Gud In Logo"
               className="w-8 h-8 object-contain rounded-sm"
             />
@@ -164,7 +164,7 @@ export default function FingerprintActivationPage() {
         <div className="z-10 w-full flex flex-col items-center justify-center my-auto px-4">
           <div className="w-full max-w-[350px] h-[350px] flex items-center justify-center">
             <DotLottieReact
-              src="/Fingerprint.json"
+              src="/lottie/Fingerprint.json"
               loop
               autoplay
               className="w-full h-full object-contain"

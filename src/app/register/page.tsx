@@ -96,7 +96,7 @@ export default function RegisterPage() {
           {/* Logo Gud In */}
           <div className="flex items-center gap-2 mb-12">
             <img
-              src="/Logo.png"
+              src="/logo/Logo.png"
               alt="Gud In Logo"
               className="w-8 h-8 object-contain rounded-sm"
             />

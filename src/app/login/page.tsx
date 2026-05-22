@@ -139,7 +139,7 @@ export default function LoginPage() {
         <div className="z-10 w-full">
           <div className="flex items-center gap-2 mb-12">
             <img
-              src="/Logo.png"
+              src="/logo/Logo.png"
               alt="Gud In Logo"
               className="w-8 h-8 object-contain rounded-sm"
             />
@@ -217,7 +217,7 @@ export default function LoginPage() {
                 aria-label="Sign in with Google"
               >
                 <img
-                  src="/Google.png"
+                  src="/icons/Google.png"
                   alt="Google"
                   className="w-7 h-7 object-contain"
                 />
@@ -231,7 +231,7 @@ export default function LoginPage() {
                 aria-label="Sign in with Fingerprint"
               >
                 <img
-                  src="/Fingerprint.png"
+                  src="/icons/Fingerprint.png"
                   alt="Fingerprint"
                   className="w-7 h-7 object-contain"
                 />
@@ -244,7 +244,7 @@ export default function LoginPage() {
                 aria-label="Sign in with PIN"
               >
                 <img
-                  src="/PIN.png"
+                  src="/icons/PIN.png"
                   alt="PIN"
                   className="w-8 h-8 object-contain"
                 />

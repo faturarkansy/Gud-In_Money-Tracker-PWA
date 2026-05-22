@@ -15,37 +15,35 @@ import {
 } from "lucide-react";
 import FloatingNavbar from "@/components/FloatingNavbar";
 
-const BANK_LIST = [
-  { name: "KlikBCA Internet Banking", icon: "/icons/klikbca.png" },
-  { name: "m-BCA", icon: "/icons/mbca.png" },
-  { name: "BRI Internet Banking", icon: "/icons/bri-ib.png" },
-  { name: "Livin' by Mandiri", icon: "/icons/livin.png" },
-  { name: "PermataNet", icon: "/icons/permata.png" },
+const BANK_CONV_LIST = [
+  { name: "BCA Mobile", icon: "/icons/mbca.png" },
   { name: "MyBCA", icon: "/icons/mybca.png" },
-  { name: "Danamon", icon: "/icons/danamon.png" },
-  { name: "OCBC NISP", icon: "/icons/ocbc.png" },
-  { name: "OCTO Clicks by CIMB Niaga", icon: "/icons/octo.png" },
-  { name: "BNI Mobile Banking", icon: "/icons/bni-mobile.png" },
-  { name: "BNI Internet Banking", icon: "/icons/bni-ib.png" },
-  { name: "BSI NET", icon: "/icons/bsi.png" },
-  { name: "Maybank", icon: "/icons/maybank.png" },
-  { name: "Bank Jago", icon: "/icons/jago.png" },
-  { name: "Bank DBS", icon: "/icons/dbs.png" },
-  { name: "Bank UOB", icon: "/icons/uob.png" },
-  { name: "Jenius", icon: "/icons/jenius.png" },
+  { name: "Livin' by Mandiri", icon: "/icons/livin.png" },
+  { name: "Wondr by BNI", icon: "/icons/wondr.png" },
   { name: "BRI Mobile", icon: "/icons/brimo.png" },
-  { name: "Sea Bank", icon: "/icons/seabank.png" },
+  { name: "Bale by BTN", icon: "/icons/btn.png" },
+  { name: "OCTO by CIMB Niaga", icon: "/icons/octo.png" },
+  { name: "D-Bank PRO", icon: "/icons/danamon.png" },
+  { name: "Byond by BSI", icon: "/icons/ocbc.png" },
+  { name: "MobilePanin", icon: "/icons/panin.png" },
+  { name: "M-Smile by Bank Mega", icon: "/icons/mega.png" },
+  { name: "OCBC Mobile Indonesia", icon: "/icons/mocbc.png" },
+  { name: "Maybank2u UD", icon: "/icons/maybank.png" },
+];
+
+const BANK_DIGI_LIST = [
+  { name: "Blu by BCA Digital", icon: "/icons/blu.png" },
+  { name: "Bank Jago", icon: "/icons/jago.png" },
+  { name: "UOB TMRW Indonesia", icon: "/icons/uob.png" },
+  { name: "Jenius", icon: "/icons/jenius.png" },
+  { name: "SeaBank", icon: "/icons/seabank.png" },
   { name: "Line Bank", icon: "/icons/linebank.png" },
   { name: "Allo Bank", icon: "/icons/allobank.png" },
-  { name: "Bank Neo Commerce", icon: "/icons/bnc.png" },
-  { name: "Bank Panin", icon: "/icons/panin.png" },
-  { name: "Bank BTN", icon: "/icons/btn.png" },
-  { name: "Bank Mega", icon: "/icons/mega.png" },
-  { name: "Blu by BCA Digital", icon: "/icons/blu.png" },
-  { name: "TMRW by UOB", icon: "/icons/tmrw.png" },
-  { name: "Bank Aladin Syariah", icon: "/icons/aladin.png" },
-  { name: "Raya Bank", icon: "/icons/raya.png" },
-  { name: "Krom Bank", icon: "/icons/krom.png" },
+  { name: "Neobank by BNC Digital", icon: "/icons/bnc.png" },
+  { name: "Permata Me", icon: "/icons/permatame.png" },
+  { name: "Digibank by DBS", icon: "/icons/dbs.png" },
+  { name: "Raya - Bank Digital", icon: "/icons/raya.png" },
+  { name: "Krom - Bank Digital", icon: "/icons/krom.png" },
   { name: "Superbank", icon: "/icons/superbank.png" },
   { name: "Bank Saqu", icon: "/icons/saqu.png" },
 ];
@@ -56,10 +54,11 @@ const EWALLET_LIST = [
   { name: "ShopeePay", icon: "/icons/shopeepay.png" },
   { name: "Dana", icon: "/icons/dana.png" },
   { name: "LinkAja", icon: "/icons/linkaja.png" },
-  { name: "iSAKU", icon: "/icons/isaku.png" },
-  { name: "Sakuku", icon: "/icons/sakuku.png" },
   { name: "Doku", icon: "/icons/doku.png" },
 ];
+
+// Gabungkan semua daftar untuk mempermudah pencarian aset logo di kartu utama
+const ALL_ACCOUNTS = [...BANK_CONV_LIST, ...BANK_DIGI_LIST, ...EWALLET_LIST];
 
 export default function Home() {
   const supabase = createClient();
@@ -73,9 +72,10 @@ export default function Home() {
 
   // Pop-Up Switch Account State
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
-  const [selectedAccount, setSelectedAccount] = useState("mandiri");
+  // Default awal kita buat string pencarian yang pas dengan nama list, misal "livin' by mandiri"
+  const [selectedAccount, setSelectedAccount] = useState("livin' by mandiri");
 
-  // 🌟 State Kustom untuk Pengendalian Swipe Gesture
+  // State Kustom untuk Pengendalian Swipe Gesture
   const [isFullScreen, setIsFullScreen] = useState(false);
   const touchStartY = useRef(0);
   const touchEndY = useRef(0);
@@ -110,13 +110,15 @@ export default function Home() {
       if (profileData && !profileError) {
         setUserData({
           name:
-            profileData.full_name || profileData.username || "Pengguna Gud In",
+            profileData.full_name ||
+            profileData.username ||
+            "Fatur Arkan Syawalva",
           avatar:
             profileData.avatar_url || user.user_metadata?.avatar_url || null,
         });
       } else {
         setUserData({
-          name: user.user_metadata?.full_name || "User Gud In",
+          name: user.user_metadata?.full_name || "Fatur Arkan Syawalva",
           avatar: user.user_metadata?.avatar_url || null,
         });
       }
@@ -139,7 +141,7 @@ export default function Home() {
       window.removeEventListener("open-global-scanner", handleOpenScanner);
   }, [router, supabase]);
 
-  // 🌟 LOGIKA SWIPE DETECTOR
+  // LOGIKA SWIPE DETECTOR
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartY.current = e.targetTouches[0].clientY;
   };
@@ -150,17 +152,13 @@ export default function Home() {
 
   const handleTouchEnd = () => {
     const diffY = touchStartY.current - touchEndY.current;
-
-    // Jika di-slide ke atas secara signifikan (minimal 50px)
     if (diffY > 50) {
       setIsFullScreen(true);
-    }
-    // Jika di-slide ke bawah secara signifikan (minimal -50px)
-    else if (diffY < -50) {
+    } else if (diffY < -50) {
       if (isFullScreen) {
-        setIsFullScreen(false); // Balikkan ke ukuran normal (80vh) dulu jika sedang full screen
+        setIsFullScreen(false);
       } else {
-        closeModal(); // Tutup total jika posisi dari awal sudah normal
+        closeModal();
       }
     }
   };
@@ -180,6 +178,11 @@ export default function Home() {
     return item.type === "income" ? acc + amount : acc - amount;
   }, 1000000);
 
+  // Cari objek akun aktif saat ini untuk mengambil link icon-nya secara dinamis
+  const currentActiveAccount = ALL_ACCOUNTS.find(
+    (acc) => acc.name.toLowerCase() === selectedAccount.toLowerCase(),
+  ) || { name: "Livin' by Mandiri", icon: "/icons/livin.png" };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-100">
@@ -192,7 +195,15 @@ export default function Home() {
 
   return (
     <div className="min-h-screen w-full bg-gray-100 flex items-center justify-center p-0 sm:p-4">
+      {/* PEMBUNGKUS UTAMA MOCKUP HANDPHONE M-BANKING STYLE */}
       <div className="relative w-full max-w-md min-h-screen sm:min-h-screen sm:rounded-[40px] sm:shadow-2xl bg-[#EFEFEF] overflow-hidden p-6 flex flex-col justify-between">
+        <div
+          className="absolute right-[-30%] top-[-10%] w-[420px] h-[420px] rounded-full pointer-events-none"
+          style={{
+            background:
+              "radial-gradient(circle at center, #F6DACA 0%, #EFEFEF 70%)",
+          }}
+        />
         {/* Konten Halaman Utama */}
         <div className="z-10 w-full flex flex-col gap-6 pb-24">
           {/* USER HEADER TOP BAR */}
@@ -227,30 +238,45 @@ export default function Home() {
             </button>
           </div>
 
-          {/* SECTION BANK */}
-          <div>
-            <h3 className="text-[15px] font-bold text-gray-900 tracking-tight">
-              Bank Account
-            </h3>
-            <div className="flex items-center gap-2 mt-1 text-gray-400">
-              <span className="text-[11px] font-extrabold uppercase tracking-wider text-blue-700">
-                {selectedAccount}
-              </span>
-              <ArrowLeftRight
-                size={12}
-                className="text-gray-300 stroke-[2.5]"
-              />
-              <span
-                onClick={() => setIsAccountModalOpen(true)}
-                className="text-[11px] font-bold text-gray-500 hover:text-black transition-colors cursor-pointer select-none underline decoration-dotted decoration-[#FEDC34] underline-offset-2"
-              >
-                Switch Account
-              </span>
+          {/* 🌟 KARTU TERBARU: FINANCE ACCOUNT CARD DENGAN BG SVG (MATCHING IMAGE_2779E3) */}
+          <div
+            className="w-full h-[145px] rounded-3xl px-4 py-3 flex flex-col justify-between relative bg-cover bg-center overflow-hidden shadow-[0_0_6px_0_rgba(0,0,0,0.25)] border border-yellow-200/20 select-none"
+            style={{ backgroundImage: "url('/background/finance_acc_bg.svg')" }}
+          >
+            {/* Bagian Atas: Judul Tetap di Atas */}
+            <div>
+              <h3 className="text-lg font-semibold text-black ml-2 tracking-tight opacity-80">
+                Finance Account
+              </h3>
+            </div>
+
+            {/* 🌟 Bagian Bawah: Konten Horizontal (Icon Bank & Tombol Switch Bersebelahan) */}
+            <div className="w-full flex items-center justify-between gap-4 mt-auto mb-1">
+              {/* Sisi Kiri: Render logo m-banking aktif */}
+              <div className="mb-2 mr-4 h-[70px] flex items-center justify-center flex-1">
+                <img
+                  src={currentActiveAccount.icon}
+                  alt={currentActiveAccount.name}
+                  className="h-full object-contain object-left filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.02)]"
+                />
+              </div>
+
+              {/* Sisi Kanan: Tombol Interaktif Switch Account */}
+              <div className="flex-shrink-0 self-end">
+                <button
+                  onClick={() => setIsAccountModalOpen(true)}
+                  className="flex items-center gap-1.5 px-3.5 py-2 bg-white/40 hover:bg-white/70 backdrop-blur-md border border-white/60 rounded-full text-[11px] font-bold text-gray-900 shadow-sm active:scale-95 transition-all"
+                >
+                  <ArrowLeftRight size={11} className="stroke-[2.5]" />
+                  <span>Switch Account</span>
+                </button>
+              </div>
             </div>
           </div>
 
           {/* CAROUSEL HORIZONTAL CARDS */}
           <div className="w-full overflow-x-auto flex gap-4 pb-2 snap-x snap-mandatory no-scrollbar">
+            {/* CARD 1: CURRENT BALANCE */}
             <div className="min-w-[295px] w-[86%] bg-white rounded-[32px] p-6 border border-gray-100 shadow-[0_12px_24px_rgba(0,0,0,0.02)] snap-center flex flex-col gap-4">
               <div>
                 <div className="flex justify-between items-center">
@@ -274,7 +300,10 @@ export default function Home() {
                     : "••••••••"}
                 </h2>
               </div>
+
               <div className="w-full h-[1px] bg-gray-100" />
+
+              {/* BUDGET METRICS */}
               <div className="flex flex-col gap-3">
                 <div className="flex items-center justify-between text-[12px]">
                   <div className="flex items-center gap-2">
@@ -306,6 +335,7 @@ export default function Home() {
               </div>
             </div>
 
+            {/* CARD 2: LAST MONTH BALANCE */}
             <div className="min-w-[295px] w-[86%] bg-white rounded-[32px] p-6 border border-gray-100 shadow-[0_12px_24px_rgba(0,0,0,0.02)] snap-center opacity-50 flex flex-col gap-4">
               <div>
                 <h4 className="text-[12px] font-bold text-gray-600">
@@ -435,53 +465,45 @@ export default function Home() {
           </div>
         )}
 
-        {/* 🌟 REVISI UTAMA: BOTTOM SHEET DENGAN OPERASI DRAG GESTURE & TANPA BUTTON X */}
+        {/* BOTTOM SHEET POP-UP SWIPE GESTURE */}
         {isAccountModalOpen && (
           <div className="absolute inset-0 z-[80] bg-black/50 backdrop-blur-sm flex items-end justify-center transition-all duration-300 ease-out">
-            {/* Backdrop click to close */}
             <div className="absolute inset-0" onClick={closeModal} />
-
             <div
-              // Inject event deteksi hardware sentuhan layar hp
               onTouchStart={handleTouchStart}
               onTouchMove={handleTouchMove}
               onTouchEnd={handleTouchEnd}
-              // Dinamis mengatur tinggi modal berdasarkan state slide
               className={`bg-white w-full rounded-t-[40px] p-6 flex flex-col z-90 relative shadow-[0_-10px_30px_rgba(0,0,0,0.15)] transition-all duration-300 ease-in-out select-none ${
                 isFullScreen ? "h-full rounded-t-none" : "max-h-[80vh] h-[80vh]"
               }`}
             >
-              {/* Handle Bar / Notch (Berfungsi sebagai penanda area slide) */}
               <div className="w-14 h-1.5 bg-gray-300 rounded-full mx-auto mb-5 cursor-grab active:cursor-grabbing flex-shrink-0" />
-
-              {/* Judul Penting */}
               <div className="mb-5 flex-shrink-0">
                 <h2 className="text-xl font-extrabold text-gray-900 tracking-tight text-center sm:text-left">
                   Kamu sering pakai akun apa?
                 </h2>
               </div>
 
-              {/* Area Konten Scroll Capsul Akun */}
               <div className="flex-1 overflow-y-auto pr-1 space-y-6 no-scrollbar pb-8">
-                {/* KATEGORI 1: BANK LIST */}
+                {/* KATEGORI 1: BANK KONVENSIONAL */}
                 <div>
                   <h3 className="text-sm font-bold text-gray-900 mb-3 ml-1">
                     Bank
                   </h3>
                   <div className="flex flex-wrap gap-2.5">
-                    {BANK_LIST.map((bank) => (
+                    {BANK_CONV_LIST.map((bank) => (
                       <button
                         key={bank.name}
                         onClick={() => {
                           setSelectedAccount(bank.name.toLowerCase());
                           closeModal();
                         }}
-                        className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 hover:border-[#FEDC34] hover:bg-yellow-50/30 rounded-full text-xs font-semibold text-gray-800 transition-all shadow-sm active:scale-95"
+                        className="flex items-center gap-2 px-3.5 py-2 bg-white border border-gray-200 hover:border-[#FEDC34] hover:bg-yellow-50/30 rounded-full text-xs font-semibold text-gray-800 transition-all shadow-sm active:scale-95"
                       >
                         <img
                           src={bank.icon}
                           alt={bank.name}
-                          className="w-4 h-4 object-contain rounded-sm"
+                          className="w-5 h-5 object-contain rounded-sm"
                           onError={(e) => {
                             e.currentTarget.style.display = "none";
                           }}
@@ -492,7 +514,36 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* KATEGORI 2: E-WALLET LIST */}
+                {/* KATEGORI 2: BANK DIGITAL */}
+                <div>
+                  <h3 className="text-sm font-bold text-gray-900 mb-3 ml-1">
+                    Bank Digital
+                  </h3>
+                  <div className="flex flex-wrap gap-2.5">
+                    {BANK_DIGI_LIST.map((bank) => (
+                      <button
+                        key={bank.name}
+                        onClick={() => {
+                          setSelectedAccount(bank.name.toLowerCase());
+                          closeModal();
+                        }}
+                        className="flex items-center gap-2 px-3.5 py-2 bg-white border border-gray-200 hover:border-[#FEDC34] hover:bg-yellow-50/30 rounded-full text-xs font-semibold text-gray-800 transition-all shadow-sm active:scale-95"
+                      >
+                        <img
+                          src={bank.icon}
+                          alt={bank.name}
+                          className="w-5 h-5 object-contain rounded-sm"
+                          onError={(e) => {
+                            e.currentTarget.style.display = "none";
+                          }}
+                        />
+                        <span>{bank.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* KATEGORI 3: E-WALLET */}
                 <div>
                   <h3 className="text-sm font-bold text-gray-900 mb-3 ml-1">
                     E-wallet
