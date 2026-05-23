@@ -16,49 +16,54 @@ import {
 import FloatingNavbar from "@/components/FloatingNavbar";
 
 const BANK_CONV_LIST = [
-  { name: "BCA Mobile", icon: "/icons/mbca.png" },
-  { name: "MyBCA", icon: "/icons/mybca.png" },
-  { name: "Livin' by Mandiri", icon: "/icons/livin.png" },
-  { name: "Wondr by BNI", icon: "/icons/wondr.png" },
-  { name: "BRI Mobile", icon: "/icons/brimo.png" },
-  { name: "Bale by BTN", icon: "/icons/btn.png" },
-  { name: "OCTO by CIMB Niaga", icon: "/icons/octo.png" },
-  { name: "D-Bank PRO", icon: "/icons/danamon.png" },
-  { name: "Byond by BSI", icon: "/icons/ocbc.png" },
-  { name: "MobilePanin", icon: "/icons/panin.png" },
-  { name: "M-Smile by Bank Mega", icon: "/icons/mega.png" },
-  { name: "OCBC Mobile Indonesia", icon: "/icons/mocbc.png" },
-  { name: "Maybank2u UD", icon: "/icons/maybank.png" },
+  { name: "BCA Mobile", icon: "/icons/mbca.png", type: "conventional" },
+  { name: "MyBCA", icon: "/icons/mybca.png", type: "conventional" },
+  { name: "Livin' by Mandiri", icon: "/icons/livin.png", type: "conventional" },
+  { name: "Wondr by BNI", icon: "/icons/wondr.png", type: "conventional" },
+  { name: "BRI Mobile", icon: "/icons/brimo.png", type: "conventional" },
+  { name: "Bale by BTN", icon: "/icons/btn.png", type: "conventional" },
+  { name: "OCTO by CIMB Niaga", icon: "/icons/octo.png", type: "conventional" },
+  { name: "D-Bank PRO", icon: "/icons/danamon.png", type: "conventional" },
+  { name: "Byond by BSI", icon: "/icons/ocbc.png", type: "conventional" },
+  { name: "MobilePanin", icon: "/icons/panin.png", type: "conventional" },
+  {
+    name: "M-Smile by Bank Mega",
+    icon: "/icons/mega.png",
+    type: "conventional",
+  },
+  {
+    name: "OCBC Mobile Indonesia",
+    icon: "/icons/mocbc.png",
+    type: "conventional",
+  },
+  { name: "Maybank2u UD", icon: "/icons/maybank.png", type: "conventional" },
 ];
 
 const BANK_DIGI_LIST = [
-  { name: "Blu by BCA Digital", icon: "/icons/blu.png" },
-  { name: "Bank Jago", icon: "/icons/jago.png" },
-  { name: "UOB TMRW Indonesia", icon: "/icons/uob.png" },
-  { name: "Jenius", icon: "/icons/jenius.png" },
-  { name: "SeaBank", icon: "/icons/seabank.png" },
-  { name: "Line Bank", icon: "/icons/linebank.png" },
-  { name: "Allo Bank", icon: "/icons/allobank.png" },
-  { name: "Neobank by BNC Digital", icon: "/icons/bnc.png" },
-  { name: "Permata Me", icon: "/icons/permatame.png" },
-  { name: "Digibank by DBS", icon: "/icons/dbs.png" },
-  { name: "Raya - Bank Digital", icon: "/icons/raya.png" },
-  { name: "Krom - Bank Digital", icon: "/icons/krom.png" },
-  { name: "Superbank", icon: "/icons/superbank.png" },
-  { name: "Bank Saqu", icon: "/icons/saqu.png" },
+  { name: "Blu by BCA Digital", icon: "/icons/blu.png", type: "digital" },
+  { name: "Bank Jago", icon: "/icons/jago.png", type: "digital" },
+  { name: "UOB TMRW Indonesia", icon: "/icons/uob.png", type: "digital" },
+  { name: "Jenius", icon: "/icons/jenius.png", type: "digital" },
+  { name: "SeaBank", icon: "/icons/seabank.png", type: "digital" },
+  { name: "Line Bank", icon: "/icons/linebank.png", type: "digital" },
+  { name: "Allo Bank", icon: "/icons/allobank.png", type: "digital" },
+  { name: "Neobank by BNC Digital", icon: "/icons/bnc.png", type: "digital" },
+  { name: "Permata Me", icon: "/icons/permatame.png", type: "digital" },
+  { name: "Digibank by DBS", icon: "/icons/dbs.png", type: "digital" },
+  { name: "Raya - Bank Digital", icon: "/icons/raya.png", type: "digital" },
+  { name: "Krom - Bank Digital", icon: "/icons/krom.png", type: "digital" },
+  { name: "Superbank", icon: "/icons/superbank.png", type: "digital" },
+  { name: "Bank Saqu", icon: "/icons/saqu.png", type: "digital" },
 ];
 
 const EWALLET_LIST = [
-  { name: "GoPay", icon: "/icons/goplay.png" },
-  { name: "OVO", icon: "/icons/ovo.png" },
-  { name: "ShopeePay", icon: "/icons/shopeepay.png" },
-  { name: "Dana", icon: "/icons/dana.png" },
-  { name: "LinkAja", icon: "/icons/linkaja.png" },
-  { name: "Doku", icon: "/icons/doku.png" },
+  { name: "GoPay", icon: "/icons/goplay.png", type: "e-wallet" },
+  { name: "OVO", icon: "/icons/ovo.png", type: "e-wallet" },
+  { name: "ShopeePay", icon: "/icons/shopeepay.png", type: "e-wallet" },
+  { name: "Dana", icon: "/icons/dana.png", type: "e-wallet" },
+  { name: "LinkAja", icon: "/icons/linkaja.png", type: "e-wallet" },
+  { name: "Doku", icon: "/icons/doku.png", type: "e-wallet" },
 ];
-
-// Gabungkan semua daftar untuk mempermudah pencarian aset logo di kartu utama
-const ALL_ACCOUNTS = [...BANK_CONV_LIST, ...BANK_DIGI_LIST, ...EWALLET_LIST];
 
 export default function Home() {
   const supabase = createClient();
@@ -70,10 +75,19 @@ export default function Home() {
   const [showBalance, setShowBalance] = useState(true);
   const [userData, setUserData] = useState<any>(null);
 
-  // Pop-Up Switch Account State
+  // State Sinkronisasi Akun dari Database Supabase
+  const [accounts, setAccounts] = useState<any[]>([]);
+  const [activeAccount, setActiveAccount] = useState<any | null>(null);
+
+  // 🌟 State Baru untuk Menampung String Waktu Bulan & Tahun Real-time
+  const [currentMonthYear, setCurrentMonthYear] = useState("");
+
+  // Pop-Up Windows Control State
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
-  // Default awal kita buat string pencarian yang pas dengan nama list, misal "livin' by mandiri"
-  const [selectedAccount, setSelectedAccount] = useState("livin' by mandiri");
+  const [isBalanceModalOpen, setIsBalanceModalOpen] = useState(false);
+  const [tempSelectedAccount, setTempSelectedAccount] = useState<any>(null);
+  const [inputBalance, setInputBalance] = useState("");
+  const [submittingBalance, setSubmittingBalance] = useState(false);
 
   // State Kustom untuk Pengendalian Swipe Gesture
   const [isFullScreen, setIsFullScreen] = useState(false);
@@ -86,80 +100,92 @@ export default function Home() {
   const [inputType, setInputType] = useState<"camera" | "text">("camera");
   const webcamRef = useRef<Webcam>(null);
 
+  // Ambil Data Akun & Transaksi Pengguna
+  const fetchUserDataAndAccounts = useCallback(async () => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      router.push(ROUTES.LOGIN);
+      return;
+    }
+
+    setUserData({
+      name: user.user_metadata?.full_name || "Fatur Arkan Syawalva",
+      avatar: user.user_metadata?.avatar_url || null,
+    });
+
+    // 1. Ambil Akun Finansial Asli dari Supabase
+    const { data: accountData } = await supabase
+      .from("finance_accounts")
+      .select("*")
+      .order("created_at", { ascending: true });
+
+    if (accountData && accountData.length > 0) {
+      setAccounts(accountData);
+
+      const savedAccountId = localStorage.getItem("active_account_id");
+      const matchedAccount = accountData.find((a) => a.id === savedAccountId);
+
+      setActiveAccount(matchedAccount || accountData[0]);
+    } else {
+      setAccounts([]);
+      setActiveAccount(null);
+    }
+
+    // 2. Ambil Log Transaksi
+    const { data: transactionData } = await supabase
+      .from("transactions")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    setTransactions(transactionData || []);
+    setLoading(false);
+  }, [router, supabase]);
+
   useEffect(() => {
     const handleOpenScanner = () => setIsScannerOpen(true);
     window.addEventListener("open-global-scanner", handleOpenScanner);
+    fetchUserDataAndAccounts();
 
-    const checkUserAndFetchData = async () => {
-      const {
-        data: { user },
-        error: authError,
-      } = await supabase.auth.getUser();
+    // 🌟 KANONIKAL SINKRONISASI WAKTU INDONESIA BARAT (WIB -> UTC+7) FORMAT INGGRIS
+    const getWIBMonthYear = () => {
+      const now = new Date();
 
-      if (authError || !user) {
-        router.push(ROUTES.LOGIN);
-        return;
-      }
+      // Ambil string waktu terkonversi ke zona waktu Asia/Jakarta (WIB)
+      const wibDateString = now.toLocaleString("en-US", {
+        timeZone: "Asia/Jakarta",
+      });
+      const wibDate = new Date(wibDateString);
 
-      const { data: profileData, error: profileError } = await supabase
-        .from("profiles")
-        .select("full_name, avatar_url, username")
-        .eq("id", user.id)
-        .maybeSingle();
+      // Format ke struktur teks singkatan bulan bahasa Inggris (ex: May 2026)
+      const formatter = new Intl.DateTimeFormat("en-US", {
+        month: "short",
+        year: "numeric",
+      });
 
-      if (profileData && !profileError) {
-        setUserData({
-          name:
-            profileData.full_name ||
-            profileData.username ||
-            "Fatur Arkan Syawalva",
-          avatar:
-            profileData.avatar_url || user.user_metadata?.avatar_url || null,
-        });
-      } else {
-        setUserData({
-          name: user.user_metadata?.full_name || "Fatur Arkan Syawalva",
-          avatar: user.user_metadata?.avatar_url || null,
-        });
-      }
-
-      await fetchTransactions();
+      setCurrentMonthYear(formatter.format(wibDate));
     };
 
-    async function fetchTransactions() {
-      const { data, error } = await supabase
-        .from("transactions")
-        .select("*")
-        .order("created_at", { ascending: false });
+    getWIBMonthYear();
 
-      if (!error) setTransactions(data || []);
-      setLoading(false);
-    }
-
-    checkUserAndFetchData();
     return () =>
       window.removeEventListener("open-global-scanner", handleOpenScanner);
-  }, [router, supabase]);
+  }, [fetchUserDataAndAccounts]);
 
-  // LOGIKA SWIPE DETECTOR
+  // LOGIKA SWIPE GESTURE BOTTOM SHEET
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartY.current = e.targetTouches[0].clientY;
   };
-
   const handleTouchMove = (e: React.TouchEvent) => {
     touchEndY.current = e.targetTouches[0].clientY;
   };
-
   const handleTouchEnd = () => {
     const diffY = touchStartY.current - touchEndY.current;
-    if (diffY > 50) {
-      setIsFullScreen(true);
-    } else if (diffY < -50) {
-      if (isFullScreen) {
-        setIsFullScreen(false);
-      } else {
-        closeModal();
-      }
+    if (diffY > 50) setIsFullScreen(true);
+    else if (diffY < -50) {
+      if (isFullScreen) setIsFullScreen(false);
+      else closeModal();
     }
   };
 
@@ -168,20 +194,48 @@ export default function Home() {
     setIsFullScreen(false);
   };
 
+  // AKSI INPUT SALDO KE SUPABASE (SAVE TO DB)
+  const handleSaveInitialBalance = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!tempSelectedAccount || !inputBalance) return;
+
+    setSubmittingBalance(true);
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) return;
+
+    const parsedBalance = parseFloat(inputBalance.replace(/[^0-9]/g, "")) || 0;
+
+    const { data, error } = await supabase
+      .from("finance_accounts")
+      .insert([
+        {
+          user_id: user.id,
+          account_name: tempSelectedAccount.name,
+          account_type: tempSelectedAccount.type,
+          current_balance: parsedBalance,
+        },
+      ])
+      .select()
+      .single();
+
+    if (error) {
+      alert(`Gagal menyimpan: ${error.message}`);
+    } else {
+      localStorage.setItem("active_account_id", data.id);
+      setInputBalance("");
+      setIsBalanceModalOpen(false);
+      await fetchUserDataAndAccounts();
+    }
+    setSubmittingBalance(false);
+  };
+
   const capture = useCallback(() => {
     const imageSrc = webcamRef.current?.getScreenshot();
     if (imageSrc) console.log("Gambar siap diproses OCR");
   }, [webcamRef]);
-
-  const totalBalance = transactions.reduce((acc, item) => {
-    const amount = parseFloat(item.amount);
-    return item.type === "income" ? acc + amount : acc - amount;
-  }, 1000000);
-
-  // Cari objek akun aktif saat ini untuk mengambil link icon-nya secara dinamis
-  const currentActiveAccount = ALL_ACCOUNTS.find(
-    (acc) => acc.name.toLowerCase() === selectedAccount.toLowerCase(),
-  ) || { name: "Livin' by Mandiri", icon: "/icons/livin.png" };
 
   if (loading) {
     return (
@@ -195,7 +249,6 @@ export default function Home() {
 
   return (
     <div className="min-h-screen w-full bg-gray-100 flex items-center justify-center p-0 sm:p-4">
-      {/* PEMBUNGKUS UTAMA MOCKUP HANDPHONE M-BANKING STYLE */}
       <div className="relative w-full max-w-md min-h-screen sm:min-h-screen sm:rounded-[40px] sm:shadow-2xl bg-[#EFEFEF] overflow-hidden p-6 flex flex-col justify-between">
         <div
           className="absolute right-[-30%] top-[-10%] w-[420px] h-[420px] rounded-full pointer-events-none"
@@ -204,10 +257,10 @@ export default function Home() {
               "radial-gradient(circle at center, #F6DACA 0%, #EFEFEF 70%)",
           }}
         />
-        {/* Konten Halaman Utama */}
+
         <div className="z-10 w-full flex flex-col gap-6 pb-24">
           {/* USER HEADER TOP BAR */}
-          <div className="w-full flex justify-between items-center bg-transparent pt-2">
+          <div className="w-full flex justify-between items-center bg-transparent">
             <div className="flex items-center gap-3">
               {userData?.avatar ? (
                 <img
@@ -229,46 +282,57 @@ export default function Home() {
                 </h2>
               </div>
             </div>
-            <button
-              className="w-10 h-10 bg-white hover:bg-gray-50 rounded-full flex items-center justify-center shadow-sm border border-gray-100 transition-all active:scale-95 relative"
-              aria-label="Notification"
-            >
+            <button className="w-10 h-10 bg-white hover:bg-gray-50 rounded-full flex items-center justify-center shadow-sm border border-gray-100 transition-all active:scale-95 relative">
               <Bell size={18} className="text-gray-800 stroke-[2.3]" />
               <span className="absolute top-2.5 right-3 w-2 h-2 bg-red-500 rounded-full" />
             </button>
           </div>
 
-          {/* 🌟 KARTU TERBARU: FINANCE ACCOUNT CARD DENGAN BG SVG (MATCHING IMAGE_2779E3) */}
+          {/* FINANCE ACCOUNT CONTAINER CARD */}
           <div
-            className="w-full h-[145px] rounded-3xl px-4 py-3 flex flex-col justify-between relative bg-cover bg-center overflow-hidden shadow-[0_0_6px_0_rgba(0,0,0,0.25)] border border-yellow-200/20 select-none"
+            className="w-full h-[145px] rounded-3xl px-6 py-4 flex flex-col justify-between relative bg-cover bg-center overflow-hidden shadow-[0_0_6px_0_rgba(0,0,0,0.25)] border border-yellow-200/20 select-none"
             style={{ backgroundImage: "url('/background/finance_acc_bg.svg')" }}
           >
-            {/* Bagian Atas: Judul Tetap di Atas */}
             <div>
-              <h3 className="text-lg font-semibold text-black ml-2 tracking-tight opacity-80">
+              <h3 className="text-sm font-bold text-black tracking-tight opacity-80">
                 Finance Account
               </h3>
             </div>
 
-            {/* 🌟 Bagian Bawah: Konten Horizontal (Icon Bank & Tombol Switch Bersebelahan) */}
             <div className="w-full flex items-center justify-between gap-4 mt-auto mb-1">
-              {/* Sisi Kiri: Render logo m-banking aktif */}
-              <div className="mb-2 mr-4 h-[70px] flex items-center justify-center flex-1">
-                <img
-                  src={currentActiveAccount.icon}
-                  alt={currentActiveAccount.name}
-                  className="h-full object-contain object-left filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.02)]"
-                />
-              </div>
+              {activeAccount ? (
+                <div className="mb-2 h-[70px] flex items-center flex-1 animate-fade-in">
+                  <img
+                    src={
+                      [
+                        ...BANK_CONV_LIST,
+                        ...BANK_DIGI_LIST,
+                        ...EWALLET_LIST,
+                      ].find(
+                        (item) =>
+                          item.name.toLowerCase() ===
+                          activeAccount.account_name.toLowerCase(),
+                      )?.icon || "/icons/livin.png"
+                    }
+                    alt={activeAccount.account_name}
+                    className="h-full object-contain object-left filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.02)]"
+                  />
+                </div>
+              ) : (
+                <span className="text-sm font-semibold text-gray-700 italic flex-1 animate-pulse">
+                  Choose your finance account
+                </span>
+              )}
 
-              {/* Sisi Kanan: Tombol Interaktif Switch Account */}
               <div className="flex-shrink-0 self-end">
                 <button
                   onClick={() => setIsAccountModalOpen(true)}
-                  className="flex items-center gap-1.5 px-3.5 py-2 bg-white/40 hover:bg-white/70 backdrop-blur-md border border-white/60 rounded-full text-[11px] font-bold text-gray-900 shadow-sm active:scale-95 transition-all"
+                  className="flex items-center gap-1.5 px-4 py-2 bg-white/60 hover:bg-white/90 backdrop-blur-md border border-white/80 rounded-full text-[11px] font-black text-gray-900 shadow-sm active:scale-95 transition-all"
                 >
                   <ArrowLeftRight size={11} className="stroke-[2.5]" />
-                  <span>Switch Account</span>
+                  <span>
+                    {activeAccount ? "Switch Account" : "Choose my account"}
+                  </span>
                 </button>
               </div>
             </div>
@@ -280,7 +344,7 @@ export default function Home() {
             <div className="min-w-[295px] w-[86%] bg-white rounded-[32px] p-6 border border-gray-100 shadow-[0_12px_24px_rgba(0,0,0,0.02)] snap-center flex flex-col gap-4">
               <div>
                 <div className="flex justify-between items-center">
-                  <h4 className="text-[12px] font-bold text-gray-900">
+                  <h4 className="text-[12px] font-bold text-gray-900/90">
                     Current Balance
                   </h4>
                   <button
@@ -291,18 +355,21 @@ export default function Home() {
                     <span>{showBalance ? "Hide" : "Show"}</span>
                   </button>
                 </div>
-                <p className="text-[11px] text-gray-400 font-medium mt-0.5">
-                  May 2026
+
+                {/* 🌟 PENYESUAIAN REAL-TIME: Memanggil teks bulan dinamis dari State */}
+                <p className="text-[11px] text-gray-400 font-semibold mt-0.5 capitalize">
+                  {currentMonthYear || "May 2026"}
                 </p>
-                <h2 className="text-[25px] font-bold text-gray-900 mt-2 tracking-tight">
+
+                <h2 className="text-[25px] font-black text-gray-900 mt-2 tracking-tight">
                   {showBalance
-                    ? `Rp ${totalBalance.toLocaleString("id-ID")},00`
+                    ? activeAccount
+                      ? `Rp ${parseFloat(activeAccount.current_balance).toLocaleString("id-ID")},00`
+                      : "Rp 0,00"
                     : "••••••••"}
                 </h2>
               </div>
-
               <div className="w-full h-[1px] bg-gray-100" />
-
               {/* BUDGET METRICS */}
               <div className="flex flex-col gap-3">
                 <div className="flex items-center justify-between text-[12px]">
@@ -331,36 +398,6 @@ export default function Home() {
                   <span className="font-bold text-gray-900">
                     Rp 2.400.000,00
                   </span>
-                </div>
-              </div>
-            </div>
-
-            {/* CARD 2: LAST MONTH BALANCE */}
-            <div className="min-w-[295px] w-[86%] bg-white rounded-[32px] p-6 border border-gray-100 shadow-[0_12px_24px_rgba(0,0,0,0.02)] snap-center opacity-50 flex flex-col gap-4">
-              <div>
-                <h4 className="text-[12px] font-bold text-gray-600">
-                  Last Month Balance
-                </h4>
-                <p className="text-[11px] text-gray-400 font-medium mt-0.5">
-                  April 2026
-                </p>
-                <h2 className="text-[25px] font-bold text-gray-800 mt-2 tracking-tight">
-                  Rp 1.000.000,00
-                </h2>
-              </div>
-              <div className="w-full h-[1px] bg-gray-100" />
-              <div className="flex flex-col gap-3 text-gray-400">
-                <div className="flex items-center justify-between text-[12px]">
-                  <span>Budget</span>
-                  <span className="font-bold">Rp 2.300.000,00</span>
-                </div>
-                <div className="flex items-center justify-between text-[12px]">
-                  <span>Saving</span>
-                  <span className="font-bold">Rp 1.100.000,00</span>
-                </div>
-                <div className="flex items-center justify-between text-[12px]">
-                  <span>Spending</span>
-                  <span className="font-bold">Rp 2.400.000,00</span>
                 </div>
               </div>
             </div>
@@ -409,63 +446,7 @@ export default function Home() {
           <FloatingNavbar />
         </div>
 
-        {/* OVERLAY SCANNER CAMERA */}
-        {isScannerOpen && (
-          <div className="fixed inset-0 z-[100] bg-black flex flex-col max-w-md mx-auto h-full">
-            <div className="relative flex-1 flex items-center justify-center bg-black">
-              <Webcam
-                audio={false}
-                ref={webcamRef}
-                screenshotFormat="image/jpeg"
-                className="absolute inset-0 w-full h-full object-cover"
-                videoConstraints={{ facingMode: "environment" }}
-              />
-              <div className="absolute inset-0 border-[50px] border-black/70 pointer-events-none">
-                <div className="w-full h-full border-2 border-white/40 rounded-[24px]"></div>
-              </div>
-              <button
-                onClick={() => setIsScannerOpen(false)}
-                className="absolute top-6 right-6 text-white text-sm bg-black/40 backdrop-blur-md w-10 h-10 rounded-full flex items-center justify-center font-bold"
-              >
-                ✕
-              </button>
-            </div>
-            <div className="bg-white p-6 rounded-t-[32px] shadow-2xl flex flex-col gap-4">
-              <select
-                value={scanType}
-                onChange={(e) => setScanType(e.target.value as any)}
-                className="w-full p-3.5 border rounded-xl bg-gray-50 font-bold text-black focus:outline-none focus:border-yellow-400 text-sm"
-              >
-                <option value="expense">🔴 Pengeluaran</option>
-                <option value="income">🟢 Pemasukan</option>
-              </select>
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex bg-gray-100 p-1 rounded-xl flex-1">
-                  <button
-                    onClick={() => setInputType("camera")}
-                    className={`flex-1 py-2.5 rounded-lg text-xs transition-all ${inputType === "camera" ? "bg-white shadow text-black font-bold" : "text-gray-400"}`}
-                  >
-                    Kamera
-                  </button>
-                  <button
-                    onClick={() => setInputType("text")}
-                    className={`flex-1 py-2.5 rounded-lg text-xs transition-all ${inputType === "text" ? "bg-white shadow text-black font-bold" : "text-gray-400"}`}
-                  >
-                    Teks
-                  </button>
-                </div>
-                <button
-                  onClick={capture}
-                  className="bg-black text-white px-8 py-3 rounded-xl font-bold shadow-md active:scale-95 transition-all text-xs tracking-wider"
-                >
-                  SCAN
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* BOTTOM SHEET POP-UP SWIPE GESTURE */}
+        {/* BOTTOM SHEET POP-UP LIST ACCOUNTS */}
         {isAccountModalOpen && (
           <div className="absolute inset-0 z-[80] bg-black/50 backdrop-blur-sm flex items-end justify-center transition-all duration-300 ease-out">
             <div className="absolute inset-0" onClick={closeModal} />
@@ -485,7 +466,6 @@ export default function Home() {
               </div>
 
               <div className="flex-1 overflow-y-auto pr-1 space-y-6 no-scrollbar pb-8">
-                {/* KATEGORI 1: BANK KONVENSIONAL */}
                 <div>
                   <h3 className="text-sm font-bold text-gray-900 mb-3 ml-1">
                     Bank
@@ -495,8 +475,23 @@ export default function Home() {
                       <button
                         key={bank.name}
                         onClick={() => {
-                          setSelectedAccount(bank.name.toLowerCase());
-                          closeModal();
+                          const existing = accounts.find(
+                            (a) =>
+                              a.account_name.toLowerCase() ===
+                              bank.name.toLowerCase(),
+                          );
+                          if (existing) {
+                            localStorage.setItem(
+                              "active_account_id",
+                              existing.id,
+                            );
+                            setActiveAccount(existing);
+                            closeModal();
+                          } else {
+                            setTempSelectedAccount(bank);
+                            setIsAccountModalOpen(false);
+                            setIsBalanceModalOpen(true);
+                          }
                         }}
                         className="flex items-center gap-2 px-3.5 py-2 bg-white border border-gray-200 hover:border-[#FEDC34] hover:bg-yellow-50/30 rounded-full text-xs font-semibold text-gray-800 transition-all shadow-sm active:scale-95"
                       >
@@ -514,7 +509,6 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* KATEGORI 2: BANK DIGITAL */}
                 <div>
                   <h3 className="text-sm font-bold text-gray-900 mb-3 ml-1">
                     Bank Digital
@@ -524,8 +518,23 @@ export default function Home() {
                       <button
                         key={bank.name}
                         onClick={() => {
-                          setSelectedAccount(bank.name.toLowerCase());
-                          closeModal();
+                          const existing = accounts.find(
+                            (a) =>
+                              a.account_name.toLowerCase() ===
+                              bank.name.toLowerCase(),
+                          );
+                          if (existing) {
+                            localStorage.setItem(
+                              "active_account_id",
+                              existing.id,
+                            );
+                            setActiveAccount(existing);
+                            closeModal();
+                          } else {
+                            setTempSelectedAccount(bank);
+                            setIsAccountModalOpen(false);
+                            setIsBalanceModalOpen(true);
+                          }
                         }}
                         className="flex items-center gap-2 px-3.5 py-2 bg-white border border-gray-200 hover:border-[#FEDC34] hover:bg-yellow-50/30 rounded-full text-xs font-semibold text-gray-800 transition-all shadow-sm active:scale-95"
                       >
@@ -543,7 +552,6 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* KATEGORI 3: E-WALLET */}
                 <div>
                   <h3 className="text-sm font-bold text-gray-900 mb-3 ml-1">
                     E-wallet
@@ -553,8 +561,23 @@ export default function Home() {
                       <button
                         key={wallet.name}
                         onClick={() => {
-                          setSelectedAccount(wallet.name.toLowerCase());
-                          closeModal();
+                          const existing = accounts.find(
+                            (a) =>
+                              a.account_name.toLowerCase() ===
+                              wallet.name.toLowerCase(),
+                          );
+                          if (existing) {
+                            localStorage.setItem(
+                              "active_account_id",
+                              existing.id,
+                            );
+                            setActiveAccount(existing);
+                            closeModal();
+                          } else {
+                            setTempSelectedAccount(wallet);
+                            setIsAccountModalOpen(false);
+                            setIsBalanceModalOpen(true);
+                          }
                         }}
                         className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 hover:border-[#FEDC34] hover:bg-yellow-50/30 rounded-full text-xs font-semibold text-gray-800 transition-all shadow-sm active:scale-95"
                       >
@@ -572,6 +595,78 @@ export default function Home() {
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* MODAL INPUT INITIAL BALANCE */}
+        {isBalanceModalOpen && tempSelectedAccount && (
+          <div className="absolute inset-0 z-[95] bg-black/60 backdrop-blur-md flex items-center justify-center p-6 animate-fade-in">
+            <div className="bg-white w-full max-w-sm rounded-[32px] p-6 shadow-2xl border border-gray-100 flex flex-col gap-5">
+              <div className="text-center flex flex-col items-center gap-3">
+                <div className="w-14 h-14 bg-gray-50 rounded-2xl flex items-center justify-center border border-gray-100 shadow-sm">
+                  <img
+                    src={tempSelectedAccount.icon}
+                    alt={tempSelectedAccount.name}
+                    className="w-8 h-8 object-contain"
+                  />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-gray-900">
+                    Input Saldo Awal
+                  </h3>
+                  <p className="text-xs text-gray-400 font-medium mt-1">
+                    Masukkan nominal saldo terkini untuk{" "}
+                    {tempSelectedAccount.name}
+                  </p>
+                </div>
+              </div>
+
+              <form
+                onSubmit={handleSaveInitialBalance}
+                className="flex flex-col gap-4"
+              >
+                <div className="relative flex items-center">
+                  <span className="absolute left-5 text-sm font-black text-gray-900 bg-gray-100 px-2.5 py-1 rounded-md border border-gray-200">
+                    Rp
+                  </span>
+                  <input
+                    type="text"
+                    required
+                    autoFocus
+                    placeholder="0"
+                    value={inputBalance}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/[^0-9]/g, "");
+                      setInputBalance(
+                        val ? parseInt(val).toLocaleString("id-ID") : "",
+                      );
+                    }}
+                    className="w-full pl-16 pr-5 py-4 bg-[#F5F5F3] border border-transparent rounded-2xl text-black font-extrabold focus:outline-none focus:bg-white focus:border-[#FEDC34] text-lg text-right tracking-wide"
+                  />
+                </div>
+
+                <div className="flex gap-3 mt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsBalanceModalOpen(false);
+                      setTempSelectedAccount(null);
+                      setInputBalance("");
+                    }}
+                    className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3.5 rounded-xl text-xs tracking-wider transition-all"
+                  >
+                    BATAL
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={submittingBalance || !inputBalance}
+                    className="flex-1 bg-[#FEDC34] hover:bg-[#ebd030] text-black font-bold py-3.5 rounded-xl text-xs tracking-wider transition-all disabled:opacity-40 shadow-md shadow-yellow-400/10"
+                  >
+                    {submittingBalance ? "SAVING..." : "SIMPAN"}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}
