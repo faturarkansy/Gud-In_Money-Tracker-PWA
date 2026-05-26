@@ -9,6 +9,7 @@ export const ROUTES = {
   GOALS: "/goals",
   PROFILE: "/profile",
   FINGERPRINT: "/fingerprint-activation",
+  INPUT_TRANSACTION: "/input-transaction",
 } as const;
 
 // Menjadikan ROUTES tidak bisa diubah (read-only) untuk mencegah bug typo

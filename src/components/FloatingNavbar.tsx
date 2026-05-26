@@ -99,18 +99,15 @@ export default function FloatingNavbar() {
           </span>
         </Link>
 
-        {/* TOMBOL ACTION SCANNER (+ BUTTON) */}
+        {/* 🌟 PERUBAHAN UTAMA: MENGUBAH BUTTON MENJADI LINK NAVIGASI KE HALAMAN INPUT TRANSACTION */}
         <div className="flex justify-center items-center pl-2 pr-1 border-l border-gray-100">
-          <button
-            onClick={() => {
-              const event = new CustomEvent("open-global-scanner");
-              window.dispatchEvent(event);
-            }}
+          <Link
+            href={ROUTES.INPUT_TRANSACTION}
             className="w-11 h-11 bg-[#FEDC34] hover:bg-[#ebd030] text-black rounded-full flex items-center justify-center shadow-md shadow-yellow-500/10 active:scale-95 transition-all"
-            aria-label="Add Transaction"
+            aria-label="Go to Input Transaction Page"
           >
             <span className="text-2xl font-light leading-none mb-0.5">+</span>
-          </button>
+          </Link>
         </div>
       </nav>
     </div>
