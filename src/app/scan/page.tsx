@@ -2,10 +2,9 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { ROUTES } from "@/utils/routes";
 import Webcam from "react-webcam";
-import Link from "next/link";
-import { X, Scan as ScanIcon, MonitorOff } from "lucide-react";
+import { X, Scan as ScanIcon, MonitorOff, Loader2 } from "lucide-react";
+import { createWorker } from "tesseract.js";
 
 export default function ScanPage() {
   const router = useRouter();
@@ -13,6 +12,10 @@ export default function ScanPage() {
 
   const [isMobile, setIsMobile] = useState<boolean | null>(null);
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean>(true);
+
+  // 🌟 State Kendali Proses Analisis OCR
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [ocrStatus, setOcrStatus] = useState("");
 
   // 1. Deteksi Perangkat Berdasarkan User Agent Sistem Operasi Mobile/Tablet
   useEffect(() => {
@@ -26,30 +29,134 @@ export default function ScanPage() {
     setIsMobile(mobileRegex.test(userAgent.toLowerCase()));
   }, []);
 
-  // 2. Simulasi Mekanisme Ekstraksi OCR Struk Finansial Gud In
-  const handleCaptureAndOCR = () => {
-    if (!webcamRef.current) return;
+  // 🌟 2. Mesin Ekstraksi Teks Semantik Hasil Pemindaian Struk Belanja
+  const parseReceiptText = (
+    text: string,
+  ): { storeName: string; nominal: number; items: any[] } => {
+    const lines = text
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0);
 
-    // Ambil base64 string screenshot dari modul kamera hp
+    let storeName = "Unknown Store";
+    let nominal = 0;
+    const items: any[] = [];
+
+    // Asumsi: Baris pertama yang valid biasanya adalah nama toko/vendor perbelanjaan
+    if (lines.length > 0) {
+      storeName = lines[0].replace(/[^a-zA-Z0-9\s]/g, "");
+    }
+
+    // Pola Regex untuk menangkap item: Contoh "Indomie Goreng 6.000" atau "Es Teh 1x4000"
+    const itemRegex = /(.*?)\s+(\d+[\.,]\d+|\d+)\s*$/;
+    const qtyRegex = /(\d+)\s*[xX×]\s*(\d+[\.,]\d+|\d+)/;
+
+    lines.forEach((line) => {
+      const lowerLine = line.toLowerCase();
+
+      // Deteksi Total Pembayaran / Grand Total Struk
+      if (
+        lowerLine.includes("total") ||
+        lowerLine.includes("grand") ||
+        lowerLine.includes("jumlah")
+      ) {
+        const match = line.match(/(\d+[\.,]\d+|\d+)/);
+        if (match) {
+          const num = parseInt(match[0].replace(/[\.,]/g, ""));
+          if (num > nominal) nominal = num;
+        }
+        return;
+      }
+
+      // Deteksi Baris Item Belanjaan
+      const itemMatch = line.match(itemRegex);
+      if (itemMatch) {
+        const namePart = itemMatch[1].trim();
+        const pricePart = itemMatch[2].replace(/[\.,]/g, "");
+        const price = parseInt(pricePart) || 0;
+
+        // Jangan masukkan baris total/pajak ke dalam list item belanjaan
+        if (/total|grand|subtotal|pajak|tax|cash|kembali/i.test(namePart))
+          return;
+
+        // Cek apakah ada informasi kuantitas pengali di baris tersebut
+        const qtyMatch = line.match(qtyRegex);
+        if (qtyMatch) {
+          const qty = parseInt(qtyMatch[1]) || 1;
+          const singlePrice =
+            parseInt(qtyMatch[2].replace(/[\.,]/g, "")) || price;
+          items.push({
+            name: namePart.replace(qtyRegex, "").trim(),
+            qty,
+            price: singlePrice,
+          });
+        } else {
+          items.push({ name: namePart, qty: 1, price });
+        }
+      }
+    });
+
+    // Fallback hitung total dari akumulasi item jika nominal total utama gagal terbaca regex
+    if (nominal === 0 && items.length > 0) {
+      nominal = items.reduce((acc, item) => acc + item.price * item.qty, 0);
+    }
+
+    return {
+      storeName: storeName || "Merchant Gud In",
+      nominal: nominal || 10000, // Fallback nilai default minimalis jika struk buram
+      items:
+        items.length > 0
+          ? items
+          : [{ name: "Item Terpindai", qty: 1, price: 10000 }],
+    };
+  };
+
+  // 🌟 3. Eksekutor Kamera & Worker Tesseract OCR
+  const handleCaptureAndOCR = async () => {
+    if (!webcamRef.current || isProcessing) return;
+
     const imageSrc = webcamRef.current.getScreenshot();
     if (!imageSrc) return;
 
-    // Dummy structured data tiruan hasil pembacaan OCR teks terproses
-    const ocrMockResult = {
-      storeName: "Indomaret Lampung",
-      nominal: 10000,
-      items: [
-        { name: "Indomie Goreng", qty: 1, price: 6000 },
-        { name: "Es Teh Anget", qty: 1, price: 4000 },
-      ],
-      capturedImage: imageSrc, // Teruskan data base64 gambar untuk preview struk
-    };
+    setIsProcessing(true);
+    setOcrStatus("Menginisialisasi Mesin...");
 
-    // Simpan di sessionStorage agar bisa ditangkap oleh halaman input transaksi
-    sessionStorage.setItem("gudin_ocr_result", JSON.stringify(ocrMockResult));
+    try {
+      // Buat instance worker Tesseract dengan dukungan bahasa Indonesia & Inggris
+      const worker = await createWorker(["ind", "eng"]);
 
-    // Alihkan navigasi kembali
-    router.push("/Input_Transaction");
+      setOcrStatus("Memindai Gambar Struk...");
+      const {
+        data: { text },
+      } = await worker.recognize(imageSrc);
+
+      setOcrStatus("Mengekstraksi Data...");
+      await worker.terminate();
+
+      // Olah teks mentah ke objek terstruktur
+      const parsedResult = parseReceiptText(text);
+
+      // Gabungkan base64 gambar tangkapan kamera ke objek respon akhir
+      const finalOcrResult = {
+        ...parsedResult,
+        capturedImage: imageSrc,
+      };
+
+      // Simpan di sessionStorage untuk diteruskan ke halaman input-transaction/page.tsx
+      sessionStorage.setItem(
+        "gudin_ocr_result",
+        JSON.stringify(finalOcrResult),
+      );
+
+      setIsProcessing(false);
+      router.push("/Input_Transaction");
+    } catch (error) {
+      console.error("OCR Eror:", error);
+      alert(
+        "Proses OCR gagal, silakan coba lagi dengan pencahayaan yang lebih terang.",
+      );
+      setIsProcessing(false);
+    }
   };
 
   if (isMobile === null) {
@@ -60,7 +167,6 @@ export default function ScanPage() {
     );
   }
 
-  // 🔴 RESTRIKSI LAPTOP/DESKTOP: Jika bukan mobile/tablet, tampilkan layar proteksi
   if (!isMobile) {
     return (
       <div className="min-h-screen w-full bg-gray-100 flex items-center justify-center p-4">
@@ -77,48 +183,63 @@ export default function ScanPage() {
               focusing on compactibility. Please open this page from your phone.
             </p>
           </div>
-
-          <Link
-            href={ROUTES.HOME}
+          <button
+            onClick={() => router.push("/Input_Transaction")}
             className="w-full mt-2 bg-gray-900 hover:bg-gray-800 text-white font-bold py-3.5 rounded-xl text-xs tracking-wider transition-colors"
           >
-            <span>Kembali</span>
-          </Link>
+            KEMBALI
+          </button>
         </div>
       </div>
     );
   }
 
-  // 🟢 TAMPILAN KAMERA MOBILE (MENGIKUTI DESIGN IMAGE_BF53A3)
   return (
     <div className="min-h-screen w-full bg-gray-100 flex items-center justify-center p-0 sm:p-4">
       <div className="relative w-full max-w-md h-screen sm:h-[840px] sm:rounded-[40px] sm:shadow-2xl bg-black overflow-hidden flex flex-col justify-between">
-        {/* Tombol Silang Pojok Kanan Atas */}
         <button
           onClick={() => router.push("/Input_Transaction")}
-          className="absolute top-6 right-6 z-50 w-10 h-10 bg-black/40 backdrop-blur-md rounded-full flex items-center justify-center text-white transition-all active:scale-90"
+          disabled={isProcessing}
+          className="absolute top-6 right-6 z-50 w-10 h-10 bg-black/40 backdrop-blur-md rounded-full flex items-center justify-center text-white transition-all active:scale-90 disabled:opacity-30"
         >
           <X size={20} className="stroke-[2.5]" />
         </button>
 
-        {/* Viewfinder Area Jendela Kamera */}
         <div className="relative flex-1 flex items-center justify-center bg-black">
           <Webcam
             audio={false}
             ref={webcamRef}
             screenshotFormat="image/jpeg"
             className="absolute inset-0 w-full h-full object-cover"
-            videoConstraints={{ facingMode: "environment" }} // Gunakan kamera belakang HP
+            videoConstraints={{ facingMode: "environment" }}
             onUserMediaError={() => setHasCameraPermission(false)}
           />
 
-          {/* Bingkai Target Pemindai (Scanner Overlay Target) */}
           <div className="absolute inset-0 border-[45px] border-black/60 pointer-events-none flex items-center justify-center">
             <div className="w-full h-[65%] border-2 border-[#FCD844] rounded-[24px] relative shadow-[0_0_0_9999px_rgba(0,0,0,0.2)]">
-              {/* Garis Laser Efek Animasi Bergerak Hijau */}
-              <div className="absolute inset-x-0 h-[2px] bg-emerald-400 top-1/2 -translate-y-1/2 shadow-[0_0_10px_#34d399] opacity-80" />
+              <div
+                className={`absolute inset-x-0 h-[2px] bg-emerald-400 top-1/2 -translate-y-1/2 shadow-[0_0_10px_#34d399] ${isProcessing ? "animate-bounce" : "opacity-80"}`}
+              />
             </div>
           </div>
+
+          {/* 🌟 LOADING SCREEN OVERLAY SAAT PROSES SCANNING BERJALAN */}
+          {isProcessing && (
+            <div className="absolute inset-0 bg-black/75 z-40 flex flex-col items-center justify-center text-center p-6 text-white gap-3.5 select-none backdrop-blur-sm animate-fade-in">
+              <Loader2
+                size={36}
+                className="text-[#FCD844] animate-spin stroke-[2.5]"
+              />
+              <div className="space-y-1">
+                <span className="font-black text-sm tracking-wide text-white uppercase block">
+                  Gud In Intelligence OCR
+                </span>
+                <span className="text-xs text-gray-400 font-medium tracking-tight block">
+                  {ocrStatus}
+                </span>
+              </div>
+            </div>
+          )}
 
           {!hasCameraPermission && (
             <div className="absolute inset-0 bg-black/90 z-40 flex flex-col items-center justify-center p-6 text-center text-white gap-2">
@@ -130,14 +251,14 @@ export default function ScanPage() {
           )}
         </div>
 
-        {/* Baris Tombol Aksi Bawah Panel */}
         <div className="w-full p-6 bg-black flex flex-col items-center justify-center">
           <p className="text-white/60 text-[11px] font-medium tracking-wide mb-4 text-center">
             Posisikan struk belanja di dalam kotak area pemindaian laser
           </p>
           <button
             onClick={handleCaptureAndOCR}
-            className="w-full bg-[#FCD844] hover:bg-[#ebd030] text-gray-900 font-black py-4 rounded-2xl text-sm tracking-wider shadow-lg shadow-yellow-500/10 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+            disabled={isProcessing || !hasCameraPermission}
+            className="w-full bg-[#FCD844] hover:bg-[#ebd030] text-gray-900 font-black py-4 rounded-2xl text-sm tracking-wider shadow-lg shadow-yellow-500/10 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-40"
           >
             <ScanIcon size={16} className="stroke-[3]" />
             <span>Scan</span>
