@@ -10,6 +10,7 @@ export const ROUTES = {
   PROFILE: "/profile",
   FINGERPRINT: "/fingerprint-activation",
   INPUT_TRANSACTION: "/input-transaction",
+  SCAN: "/scan",
 } as const;
 
 // Menjadikan ROUTES tidak bisa diubah (read-only) untuk mencegah bug typo

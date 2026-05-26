@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
+import Link from "next/link";
 import { ROUTES } from "@/utils/routes";
 import {
   X,
@@ -53,7 +54,7 @@ export default function InputTransaction() {
   const router = useRouter();
   const supabase = createClient();
 
-  // Form State
+  // Form Dynamic State
   const [transactionType, setTransactionType] = useState<"expense" | "income">(
     "expense",
   );
@@ -65,11 +66,15 @@ export default function InputTransaction() {
     useState("/icons/livin.png");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // 🌟 State Baru untuk Pengendalian Pop-up Dialog ala Android
+  // Android Style Dialog Control State
   const [isTypeDialogOpen, setIsTypeDialogOpen] = useState(false);
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
 
+  // 🌟 State Baru Penampung Hasil Olahan Real OCR Dari Halaman Kamera Scan
+  const [ocrData, setOcrData] = useState<any | null>(null);
+
   useEffect(() => {
+    // 1. Ambil Identitas Rekening Aktif
     const fetchActiveAccount = async () => {
       const activeId = localStorage.getItem("active_account_id");
       if (!activeId) return;
@@ -88,11 +93,29 @@ export default function InputTransaction() {
       }
     };
 
+    // 2. 🌟 MENANGKAP OPERAN DATA TRANSMISI OCR DARI HALAMAN SCAN/PAGE.TSX
+    const checkReceivedOCRData = () => {
+      const storedOcr = sessionStorage.getItem("gudin_ocr_result");
+      if (storedOcr) {
+        const parsed = JSON.parse(storedOcr);
+        setOcrData(parsed);
+
+        // Perbarui form harian otomatis berdasarkan nilai bacaan teks struk
+        setNominal(parsed.nominal);
+        setNotes(parsed.storeName); // Set otomatis nama toko belanja ke Notes harian
+
+        // Bersihkan session storage agar tidak memicu auto-fill berulang di pemuatan berikutnya
+        sessionStorage.removeItem("gudin_ocr_result");
+      }
+    };
+
     fetchActiveAccount();
+    checkReceivedOCRData();
   }, [supabase]);
 
   const handleSaveTransaction = async () => {
     setIsSubmitting(true);
+    // Jalankan integrasi insert database di sini
     setIsSubmitting(false);
     router.push("/");
   };
@@ -108,7 +131,6 @@ export default function InputTransaction() {
           </h1>
 
           <div className="w-full flex items-center justify-between gap-4">
-            {/* 🌟 CUSTOM DROPDOWN 1: JENIS TRANSAKSI (STYLE ANDROID) */}
             <div className="relative flex-1">
               <div
                 onClick={() => setIsTypeDialogOpen(true)}
@@ -121,7 +143,6 @@ export default function InputTransaction() {
               </div>
             </div>
 
-            {/* Input Tanggal */}
             <div className="relative flex-1">
               <input
                 type="date"
@@ -137,78 +158,86 @@ export default function InputTransaction() {
           </div>
         </div>
 
-        {/* ================= 2. ZONA TENGAH: KONTEN GAMBAR & LIST ITEM ================= */}
+        {/* ================= 2. ZONA TENGAH: KONTEN RENDERING OCR (ZONA SCROLL) ================= */}
         <div className="flex-1 overflow-y-auto px-6 pb-6 pt-1 z-10 no-scrollbar">
           <div className="w-full bg-white/50 backdrop-blur-md rounded-3xl p-5 border border-white/40 shadow-sm flex flex-col gap-4">
             <div className="flex justify-between items-center w-full">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-white border border-gray-200 rounded-xl overflow-hidden flex items-center justify-center p-1 shadow-sm">
-                  <img
-                    src="/icons/goplay.png"
-                    alt="Receipt"
-                    className="w-full h-full object-contain opacity-40"
-                  />
+                <div className="w-10 h-10 bg-white border border-gray-200 rounded-xl overflow-hidden flex items-center justify-center shadow-sm">
+                  {ocrData?.capturedImage ? (
+                    // 🌟 Jika ada tangkapan kamera base64 asli dari hal scan, munculkan preview gambarnya disini
+                    <img
+                      src={ocrData.capturedImage}
+                      alt="Receipt Capture"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gray-200 flex items-center justify-center text-[10px] text-gray-400 font-bold">
+                      No Img
+                    </div>
+                  )}
                 </div>
                 <span className="text-sm font-bold text-gray-900 tracking-tight">
-                  img203238.png
+                  {ocrData
+                    ? "Captured_Receipt.jpg"
+                    : "Belum ada dokumen yang dipindai"}
                 </span>
               </div>
-              <button className="w-7 h-7 hover:bg-black/5 rounded-full flex items-center justify-center text-gray-800 transition-colors">
-                <X size={18} className="stroke-[2.5]" />
-              </button>
+              {ocrData && (
+                <button
+                  onClick={() => setOcrData(null)}
+                  className="w-7 h-7 hover:bg-black/5 rounded-full flex items-center justify-center text-gray-800 transition-colors"
+                >
+                  <X size={18} className="stroke-[2.5]" />
+                </button>
+              )}
             </div>
 
+            {/* List Item Dinamis Menampilkan Hasil Ekstraksi Analisis OCR Semantik */}
             <div className="flex flex-col gap-3.5 mt-2 text-sm font-bold text-gray-900">
-              <div className="w-full flex justify-between items-start">
-                <div className="flex gap-2.5">
-                  <span className="text-gray-900 mt-1">•</span>
-                  <div className="flex flex-col">
-                    <span>Indomie Goreng</span>
-                    <span className="text-xs text-gray-500 font-medium mt-0.5">
-                      Rp 6.000 × 1
+              {ocrData ? (
+                ocrData.items.map((item: any, idx: number) => (
+                  <div
+                    key={idx}
+                    className="w-full flex justify-between items-start animate-fade-in"
+                  >
+                    <div className="flex gap-2.5">
+                      <span className="text-gray-900 mt-1">•</span>
+                      <div className="flex flex-col">
+                        <span>{item.name}</span>
+                        <span className="text-xs text-gray-500 font-medium mt-0.5">
+                          Rp {item.price.toLocaleString("id-ID")} × {item.qty}
+                        </span>
+                      </div>
+                    </div>
+                    <span className="tabular-nums">
+                      Rp {(item.price * item.qty).toLocaleString("id-ID")}
                     </span>
                   </div>
+                ))
+              ) : (
+                // Tampilan fallback jika user belum melakukan scanning struk via hp
+                <div className="text-center py-6 text-xs text-gray-600 font-medium italic">
+                  Klik tombol Scan di bawah menggunakan HP untuk mendeteksi item
+                  struk belanjaan secara otomatis.
                 </div>
-                <span className="tabular-nums">Rp 6.000</span>
-              </div>
-
-              <div className="w-full flex justify-between items-start">
-                <div className="flex gap-2.5">
-                  <span className="text-gray-900 mt-1">•</span>
-                  <div className="flex flex-col">
-                    <span>Es Teh Anget</span>
-                    <span className="text-xs text-gray-500 font-medium mt-0.5">
-                      Rp 4.000 × 1
-                    </span>
-                  </div>
-                </div>
-                <span className="tabular-nums">Rp 4.000</span>
-              </div>
-
-              <div className="w-full h-[1px] bg-black/5 my-1" />
-              <div className="w-full flex justify-between items-start opacity-60">
-                <div className="flex gap-2.5">
-                  <span className="text-gray-900 mt-1">•</span>
-                  <div className="flex flex-col">
-                    <span>Kerupuk Putih</span>
-                    <span className="text-xs text-gray-500 font-medium mt-0.5">
-                      Rp 2.000 × 2
-                    </span>
-                  </div>
-                </div>
-                <span className="tabular-nums">Rp 4.000</span>
-              </div>
+              )}
             </div>
           </div>
         </div>
 
-        {/* ================= 3. BARIS BAWAH: PANEL INPUT PUTIH FIXED ================= */}
+        {/* ================= 3. BARIS BAWAH: PANEL INPUT PUTIH STICKY ================= */}
         <div className="bg-white rounded-t-[40px] px-6 pt-7 pb-8 flex flex-col gap-5 shadow-[0_-10px_30px_rgba(0,0,0,0.06)] w-full z-20 relative">
           <div className="grid grid-cols-2 gap-4 w-full">
-            <button className="flex items-center justify-center gap-2 bg-[#FCD844] hover:bg-[#ebd030] text-gray-900 font-extrabold py-3.5 rounded-2xl text-sm shadow-md shadow-yellow-500/10 active:scale-95 transition-all">
+            {/* 🌟 AKSI KLIK: Mengarahkan langsung ke halaman kamera khusus mobile */}
+            <Link
+              href={ROUTES.SCAN}
+              className="flex items-center justify-center gap-2 bg-[#FCD844] hover:bg-[#ebd030] text-gray-900 font-extrabold py-3.5 rounded-2xl text-sm shadow-md shadow-yellow-500/10 active:scale-95 transition-all"
+            >
               <Scan size={16} className="stroke-[2.5]" />
               <span>Scan</span>
-            </button>
+            </Link>
+
             <button className="flex items-center justify-center gap-2 bg-[#FCD844] hover:bg-[#ebd030] text-gray-900 font-extrabold py-3.5 rounded-2xl text-sm shadow-md shadow-yellow-500/10 active:scale-95 transition-all">
               <Upload size={16} className="stroke-[2.5]" />
               <span>Upload</span>
@@ -233,7 +262,6 @@ export default function InputTransaction() {
             </div>
           </div>
 
-          {/* 🌟 CUSTOM DROPDOWN 2: KATEGORI TRANSAKSI (STYLE ANDROID) */}
           <div className="relative w-full">
             <div
               onClick={() => setIsCategoryDialogOpen(true)}
@@ -273,11 +301,7 @@ export default function InputTransaction() {
           </div>
         </div>
 
-        {/* ====================================================================
-            🌟 INTERFAS POP-UP DIALOG DIBAWAH INI ADALAH PENGGANTI DROPDOWN ASLI
-           ==================================================================== */}
-
-        {/* DIALOG 1: PILIHAN JENIS TRANSAKSI */}
+        {/* DIALOG POP-UP 1 */}
         {isTypeDialogOpen && (
           <div className="absolute inset-0 z-[100] bg-black/40 backdrop-blur-sm flex items-center justify-center p-6 animate-fade-in">
             <div
@@ -312,7 +336,7 @@ export default function InputTransaction() {
           </div>
         )}
 
-        {/* DIALOG 2: PILIHAN KATEGORI FINANSIAL */}
+        {/* DIALOG POP-UP 2 */}
         {isCategoryDialogOpen && (
           <div className="absolute inset-0 z-[100] bg-black/40 backdrop-blur-sm flex items-center justify-center p-6 animate-fade-in">
             <div
