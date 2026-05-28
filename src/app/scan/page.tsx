@@ -31,16 +31,22 @@ export default function ScanPage() {
     setIsMobile(mobileRegex.test(userAgent.toLowerCase()));
   }, []);
 
-  // 🌟 2. MESIN PARSER OCR ADAPTIF 3 KONDISI (STRUKTURAL ALGORITMA)
-  // 🌟 2. REVISI TOTAL: PARSER ADAPTIF MULTI-KONDISI (STRUKTURAL STATE MACHINE)
+  // 🌟 2. MESIN PARSER OCR ADAPTIF DENGAN LOGGER DEBUGGING LENGKAP
   const parseReceiptText = (
     text: string,
   ): { storeName: string; nominal: number; items: any[] } => {
-    // Pecah baris teks, bersihkan spasi ujung, dan eliminasi baris kosong
+    console.log("=== [DEBUG Gud In OCR] MEMULAI PARSING TEKS MENTAH ===");
+    console.log(text);
+    console.log("====================================================");
+
     const lines = text
       .split("\n")
       .map((line) => line.trim())
       .filter((line) => line.length > 0);
+
+    console.log(
+      `[DEBUG] Berhasil memisahkan ${lines.length} baris teks valid.`,
+    );
 
     let storeName = "";
     let nominal = 0;
@@ -55,12 +61,14 @@ export default function ScanPage() {
 
     if (validHeaderLines.length > 0) {
       storeName = validHeaderLines[0].replace(/[^a-zA-Z0-9\s]/g, "").trim();
+      console.log(`[DEBUG] Nama Toko Terdeteksi: "${storeName}"`);
     } else {
       storeName = "Karis Jaya Shop";
+      console.log(`[DEBUG] Nama Toko Menggunakan Fallback: "${storeName}"`);
     }
 
     // --- LANGKAH 2: EKSTRAKSI NOMINAL GRAND TOTAL ---
-    lines.forEach((line) => {
+    lines.forEach((line, index) => {
       const lowerLine = line.toLowerCase();
       if (
         (lowerLine.includes("total") ||
@@ -73,8 +81,12 @@ export default function ScanPage() {
         const numbers = line.replace(/[^0-9]/g, "");
         if (numbers) {
           const parsed = parseInt(numbers);
-          // Ambil nominal angka terbesar yang masuk akal sebagai Grand Total
-          if (parsed > nominal && parsed < 50000000) nominal = parsed;
+          if (parsed > nominal && parsed < 50000000) {
+            nominal = parsed;
+            console.log(
+              `[DEBUG] Nominal Total Terbaca di Baris [${index}]: Rp ${nominal.toLocaleString("id-ID")}`,
+            );
+          }
         }
       }
     });
@@ -84,7 +96,6 @@ export default function ScanPage() {
       const line = lines[i];
       const lowerLine = line.toLowerCase();
 
-      // Lewati teks struktural kasir agar tidak mencederai pembacaan array item
       if (
         /toko|grosir|jl\.|no\.|telp|tanggal|waktu|terima|kasih|total|sub|bayar|kembali/i.test(
           line,
@@ -93,71 +104,59 @@ export default function ScanPage() {
         continue;
       }
 
-      // Ambil semua deretan angka terisolasi di dalam baris ini
       const numbersInLine = line.match(/\d+[\.,]\d+|\d+/g);
-
-      // Regex Fleksibel Deteksi Kuantitas (Mencari pola: "2x", "x2", "2 x", "x 2", "1 lusin x")
-      const currentLineQtyMatch =
+      const qtyMatch =
         line.match(/(\d+)\s*(?:pcs|box|klg|lusin|ml|kg)?\s*[xX×]/i) ||
         line.match(/[xX×]\s*(\d+)/);
-      const currentLineQty = currentLineQtyMatch
-        ? parseInt(currentLineQtyMatch[1]) || 1
-        : 1;
+      const currentLineQty = qtyMatch ? parseInt(qtyMatch[1]) || 1 : 1;
 
       // ------------------------------------------------------------------
-      // 🌟 KONDISI 1: Susunan Sejajar Horizontal (Nama Item -> Qty -> Harga Total)
-      // Contoh: "Martabak Original    x2    40,000"
+      // 🌟 KONDISI 1: Susunan Sejajar Horizontal
       // ------------------------------------------------------------------
       if (
         /[xX×]\s*\d+/.test(line) &&
         numbersInLine &&
         numbersInLine.length >= 2
       ) {
-        // Ambil nominal angka paling kanan sebagai harga total item
         const rawPrice = numbersInLine[numbersInLine.length - 1].replace(
           /[\.,]/g,
           "",
         );
         const totalPriceForItem = parseInt(rawPrice) || 0;
-
-        // Ekstraksi Nama: Ambil teks murni di sebelah kiri indikator perkalian kuantitas
         const namePart = line
           .split(/[xX×]/)[0]
           .replace(/[\d\.\,\-]/g, "")
           .trim();
 
         if (totalPriceForItem > 0 && namePart.length > 2) {
-          items.push({
+          const finalItem = {
             name: namePart,
             qty: currentLineQty,
-            price: Math.round(totalPriceForItem / currentLineQty), // Dapatkan harga satuan lewat kalkulasi bagi balik
-          });
+            price: Math.round(totalPriceForItem / currentLineQty),
+          };
+          items.push(finalItem);
+          console.log(`[DEBUG] Masuk [KONDISI 1] di Baris [${i}]:`, finalItem);
           continue;
         }
       }
 
       // ------------------------------------------------------------------
       // 🌟 KONDISI 2: Pola Nama di Atas Kiri -> Qty & Harga di Baris Bawah
-      // Contoh: Baris [i]: "Beras" -> Baris [i+1]: "4.000 Kg X 12.500"
       // ------------------------------------------------------------------
       if (i < lines.length - 1) {
         const nextLine = lines[i + 1];
-        const nextLineLower = nextLine.toLowerCase();
         const nextLineNumbers = nextLine.match(/\d+[\.,]\d+|\d+/g);
 
-        // Periksa apakah baris bawahnya melambangkan metrik angka perkalian
         if (
           /[xX×]/.test(nextLine) &&
           nextLineNumbers &&
           nextLineNumbers.length > 0
         ) {
-          const namePart = line.replace(/^\d+[\.\s\-]+/, "").trim(); // Bersihkan angka nomor urut depan
-
+          const namePart = line.replace(/^\d+[\.\s\-]+/, "").trim();
           const subQtyMatch =
             nextLine.match(/(\d+)\s*(?:pcs|box|klg|lusin|ml|kg)?\s*[xX×]/i) ||
             nextLine.match(/[xX×]\s*(\d+)/);
           const subQty = subQtyMatch ? parseInt(subQtyMatch[1]) || 1 : 1;
-
           const rawPrice = nextLineNumbers[nextLineNumbers.length - 1].replace(
             /[\.,]/g,
             "",
@@ -169,7 +168,7 @@ export default function ScanPage() {
             namePart.length > 2 &&
             !/total|sub|bayar/i.test(namePart)
           ) {
-            items.push({
+            const finalItem = {
               name: namePart,
               qty: subQty,
               price:
@@ -181,22 +180,25 @@ export default function ScanPage() {
                       ),
                     )
                   : Math.round(price / subQty),
-            });
-            i++; // Loncat satu baris ke bawah karena sudah diproses
+            };
+            items.push(finalItem);
+            console.log(
+              `[DEBUG] Masuk [KONDISI 2] di Baris [${i}] & [${i + 1}]:`,
+              finalItem,
+            );
+            i++;
             continue;
           }
         }
       }
 
       // ------------------------------------------------------------------
-      // 🌟 KONDISI 3: Nama & Harga Sejajar Horizontal -> Qty Berada Di Bawah Kiri
-      // Contoh: Baris [i]: "1. Indomie Goreng    Rp 36.000" -> Baris [i+1]: "1 lusin x 36,000"
+      // 🌟 KONDISI 3: Nama & Harga Sejajar Horizontal -> Qty di Bawah Kiri
       // ------------------------------------------------------------------
       if (numbersInLine && numbersInLine.length > 0 && i < lines.length - 1) {
         const nextLine = lines[i + 1];
         const nextLineLower = nextLine.toLowerCase();
 
-        // Indikasi Kondisi 3: Baris bawah berisi tanda silang perkalian kuantitas satuan lokal
         if (
           /[xX×]/.test(nextLine) &&
           (nextLineLower.includes("lusin") ||
@@ -210,26 +212,28 @@ export default function ScanPage() {
             "",
           );
           const totalPriceForItem = parseInt(rawPrice) || 0;
-
-          // Perbaikan filter ekstraksi nama: Buang nomor urut depan dan abaikan digit nominal harga di kanan
           const namePart = line
-            .replace(/^\d+[\.\s\-]+/, "") // Buang angka "1. ", "2. "
-            .replace(/[\d\.\,\-]/g, "") // Bersihkan sisa nominal harga kanan agar nama bersih total
+            .replace(/^\d+[\.\s\-]+/, "")
+            .replace(/[\d\.\,\-]/g, "")
             .replace(/rp/i, "")
             .trim();
 
-          // Deteksi Qty dari baris bawahnya
           const subQtyMatch =
             nextLine.match(/^(\d+)\s*/) || nextLine.match(/(\d+)\s*[xX×]/);
           const subQty = subQtyMatch ? parseInt(subQtyMatch[1]) || 1 : 1;
 
           if (totalPriceForItem > 0 && namePart.length > 2) {
-            items.push({
+            const finalItem = {
               name: namePart,
               qty: subQty,
-              price: Math.round(totalPriceForItem / subQty), // Sesuai instruksi: Harga baris atas dianggap sebagai total akumulasi harga produk
-            });
-            i++; // Loncat baris bawah karena sudah terekstrak berpasangan
+              price: Math.round(totalPriceForItem / subQty),
+            };
+            items.push(finalItem);
+            console.log(
+              `[DEBUG] Masuk [KONDISI 3] di Baris [${i}] & [${i + 1}]:`,
+              finalItem,
+            );
+            i++;
             continue;
           }
         }
@@ -238,7 +242,9 @@ export default function ScanPage() {
 
     // --- LANGKAH 4: BACKUP FALLBACK RECONCILIATION ---
     if (items.length === 0) {
-      // Jika semua kondisi gagal akibat gambar blur, ekstrak semua baris teks murni sebagai list nama item tunggal
+      console.log(
+        "[DEBUG] Seluruh kondisi gagal dipetakan. Menjalankan fallback...",
+      );
       const cleanLines = lines.filter(
         (l) =>
           l.length > 3 &&
@@ -247,7 +253,6 @@ export default function ScanPage() {
           ),
       );
       if (cleanLines.length > 0) {
-        setOcrStatus("Menjalankan Pemulihan Data...");
         cleanLines.slice(0, 3).forEach((fallbackLine) => {
           const cleanName = fallbackLine
             .replace(/[\d\.\,\-\:\/]/g, "")
@@ -266,12 +271,11 @@ export default function ScanPage() {
       }
     }
 
-    // Koreksi akhir nominal total jika masih bernilai kosong
     if (nominal === 0 && items.length > 0) {
       nominal = items.reduce((acc, item) => acc + item.price * item.qty, 0);
     }
 
-    return {
+    const finalOutput = {
       storeName: storeName || "Karis Jaya Shop",
       nominal: nominal || 70000,
       items:
@@ -279,6 +283,9 @@ export default function ScanPage() {
           ? items
           : [{ name: "Indomie Goreng", qty: 12, price: 3000 }],
     };
+
+    console.log("[DEBUG] HASIL AKHIR RESTRUKTURISASI DATA OCR:", finalOutput);
+    return finalOutput;
   };
 
   // 3. Eksekutor Kamera & Worker Tesseract OCR
@@ -292,14 +299,26 @@ export default function ScanPage() {
     setOcrStatus("Menginisialisasi Mesin...");
 
     try {
-      const worker = await createWorker(["ind", "eng"]);
+      // 🌟 MENAMBAHKAN LOGGER INTERNAL TESSERACT KE CONSOLE LOG
+      console.log("[Tesseract] Membuat Worker Instance...");
+      const worker = await createWorker(["ind", "eng"], 1, {
+        logger: (m) => {
+          console.log(
+            `[Tesseract Progress] status: ${m.status}, progress: ${Math.round(m.progress * 100)}%`,
+          );
+        },
+      });
 
       setOcrStatus("Memindai Gambar Struk...");
+      console.log("[Tesseract] Memulai pencocokan piksel gambar ke teks...");
       const {
         data: { text },
       } = await worker.recognize(imageSrc);
 
       setOcrStatus("Mengekstraksi Data...");
+      console.log(
+        "[Tesseract] Pemindaian sukses. Menghancurkan worker instance...",
+      );
       await worker.terminate();
 
       const parsedResult = parseReceiptText(text);
@@ -317,7 +336,7 @@ export default function ScanPage() {
       setIsProcessing(false);
       router.push("/Input_Transaction");
     } catch (error) {
-      console.error("OCR Eror:", error);
+      console.error("[DEBUG ERROR OCR]:", error);
       alert(
         "Proses OCR gagal, silakan coba lagi dengan pencahayaan yang lebih terang.",
       );
