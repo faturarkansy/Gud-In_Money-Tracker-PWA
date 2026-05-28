@@ -3,7 +3,13 @@
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Webcam from "react-webcam";
-import { X, Scan as ScanIcon, MonitorOff, Loader2 } from "lucide-react";
+import {
+  X,
+  Scan as ScanIcon,
+  MonitorOff,
+  Loader2,
+  ArrowRight,
+} from "lucide-react";
 import Link from "next/link";
 import { ROUTES } from "@/utils/routes";
 import { createWorker } from "tesseract.js";
@@ -18,6 +24,9 @@ export default function ScanPage() {
   // State Kendali Proses Analisis OCR
   const [isProcessing, setIsProcessing] = useState(false);
   const [ocrStatus, setOcrStatus] = useState("");
+
+  // 🌟 State Baru Pembantu Mode Debugging Manual
+  const [isDebugDone, setIsDebugDone] = useState(false);
 
   // 1. Deteksi Perangkat Berdasarkan User Agent Sistem Operasi Mobile/Tablet
   useEffect(() => {
@@ -296,10 +305,10 @@ export default function ScanPage() {
     if (!imageSrc) return;
 
     setIsProcessing(true);
+    setIsDebugDone(false);
     setOcrStatus("Menginisialisasi Mesin...");
 
     try {
-      // 🌟 MENAMBAHKAN LOGGER INTERNAL TESSERACT KE CONSOLE LOG
       console.log("[Tesseract] Membuat Worker Instance...");
       const worker = await createWorker(["ind", "eng"], 1, {
         logger: (m) => {
@@ -333,8 +342,14 @@ export default function ScanPage() {
         JSON.stringify(finalOcrResult),
       );
 
+      // 🌟 REVISI UTAMA: Menonaktifkan otomatisasi redirect untuk kebutuhan inspeksi log
       setIsProcessing(false);
-      router.push("/Input_Transaction");
+      setIsDebugDone(true); // Membuka tombol navigasi manual
+      setOcrStatus(
+        "Scan Berhasil! Silakan periksa tab Console Log Laptop kamu.",
+      );
+
+      // router.push("/Input_Transaction"); <--- Baris ini sengaja kita kunci
     } catch (error) {
       console.error("[DEBUG ERROR OCR]:", error);
       alert(
@@ -434,29 +449,33 @@ export default function ScanPage() {
               </div>
             </div>
           )}
-
-          {!hasCameraPermission && (
-            <div className="absolute inset-0 bg-black/90 z-40 flex flex-col items-center justify-center p-6 text-center text-white gap-2">
-              <span className="font-bold text-sm">Akses Kamera Ditolak</span>
-              <span className="text-xs text-gray-400">
-                Izinkan browser mengakses modul perangkat keras kamera kamu.
-              </span>
-            </div>
-          )}
         </div>
 
         <div className="w-full p-6 bg-black flex flex-col items-center justify-center">
           <p className="text-white/60 text-[11px] font-medium tracking-wide mb-4 text-center">
-            Posisikan struk belanja di dalam kotak area pemindaian laser
+            {ocrStatus ||
+              "Posisikan struk belanja di dalam kotak area pemindaian laser"}
           </p>
-          <button
-            onClick={handleCaptureAndOCR}
-            disabled={isProcessing || !hasCameraPermission}
-            className="w-full bg-[#F3D22B] hover:bg-[#ebd030] text-gray-900 font-black py-4 rounded-2xl text-sm tracking-wider shadow-lg shadow-yellow-500/10 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-40"
-          >
-            <ScanIcon size={16} className="stroke-[3]" />
-            <span>Scan</span>
-          </button>
+
+          {/* TOMBOL AKSI BAWAH DINAMIS UNTUK DEBUGGING */}
+          {isDebugDone ? (
+            <button
+              onClick={() => router.push("/Input_Transaction")}
+              className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-black py-4 rounded-2xl text-sm tracking-wider shadow-lg active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+            >
+              <span>SELESAI DEBUG</span>
+              <ArrowRight size={16} className="stroke-[3]" />
+            </button>
+          ) : (
+            <button
+              onClick={handleCaptureAndOCR}
+              disabled={isProcessing || !hasCameraPermission}
+              className="w-full bg-[#F3D22B] hover:bg-[#ebd030] text-gray-900 font-black py-4 rounded-2xl text-sm tracking-wider shadow-lg shadow-yellow-500/10 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-40"
+            >
+              <ScanIcon size={16} className="stroke-[3]" />
+              <span>Scan</span>
+            </button>
+          )}
         </div>
       </div>
     </div>
