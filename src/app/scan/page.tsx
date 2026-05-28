@@ -25,7 +25,7 @@ export default function ScanPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [ocrStatus, setOcrStatus] = useState("");
 
-  // 🌟 State Baru Pembantu Mode Debugging Manual
+  // State Baru Pembantu Mode Debugging Manual
   const [isDebugDone, setIsDebugDone] = useState(false);
 
   // 1. Deteksi Perangkat Berdasarkan User Agent Sistem Operasi Mobile/Tablet
@@ -40,7 +40,7 @@ export default function ScanPage() {
     setIsMobile(mobileRegex.test(userAgent.toLowerCase()));
   }, []);
 
-  // 🌟 2. MESIN PARSER OCR ADAPTIF DENGAN LOGGER DEBUGGING LENGKAP
+  // 🌟 2. PERBAIKAN TOTAL: PARSER ADAPTIF MULTI-KONDISI BERDASARKAN HASIL DEBUG KONSOL
   const parseReceiptText = (
     text: string,
   ): { storeName: string; nominal: number; items: any[] } => {
@@ -320,9 +320,13 @@ export default function ScanPage() {
 
       setOcrStatus("Memindai Gambar Struk...");
       console.log("[Tesseract] Memulai pencocokan piksel gambar ke teks...");
+
+      // 🌟 PERBAIKAN: Memaksa parameter auto-rotate aktif agar segmentasi teks stabil
       const {
         data: { text },
-      } = await worker.recognize(imageSrc);
+      } = await worker.recognize(imageSrc, {
+        rotateAuto: true,
+      });
 
       setOcrStatus("Mengekstraksi Data...");
       console.log(
@@ -342,14 +346,14 @@ export default function ScanPage() {
         JSON.stringify(finalOcrResult),
       );
 
-      // 🌟 REVISI UTAMA: Menonaktifkan otomatisasi redirect untuk kebutuhan inspeksi log
+      // 🌟 PERBAIKAN UTAMA: Mengunci redirect otomatis agar data console log tidak hangus/hilang
       setIsProcessing(false);
-      setIsDebugDone(true); // Membuka tombol navigasi manual
+      setIsDebugDone(true);
       setOcrStatus(
         "Scan Berhasil! Silakan periksa tab Console Log Laptop kamu.",
       );
 
-      // router.push("/Input_Transaction"); <--- Baris ini sengaja kita kunci
+      // router.push("/Input_Transaction"); <--- Sengaja dikunci untuk inspeksi
     } catch (error) {
       console.error("[DEBUG ERROR OCR]:", error);
       alert(
@@ -416,10 +420,12 @@ export default function ScanPage() {
             ref={webcamRef}
             screenshotFormat="image/jpeg"
             className="absolute inset-0 w-full h-full object-cover"
+            // 🌟 PERBAIKAN: Mengunci aspek rasio hardware 9:16 vertikal murni agar piksel sensor tidak melebar
             videoConstraints={{
               facingMode: "environment",
-              width: { ideal: 1920 },
-              height: { ideal: 1080 },
+              width: { ideal: 1080 },
+              height: { ideal: 1920 },
+              aspectRatio: 0.5625,
             }}
             onUserMediaError={() => setHasCameraPermission(false)}
           />
@@ -447,6 +453,15 @@ export default function ScanPage() {
                   {ocrStatus}
                 </span>
               </div>
+            </div>
+          )}
+
+          {!hasCameraPermission && (
+            <div className="absolute inset-0 bg-black/90 z-40 flex flex-col items-center justify-center p-6 text-center text-white gap-2">
+              <span className="font-bold text-sm">Akses Kamera Ditolak</span>
+              <span className="text-xs text-gray-400">
+                Izinkan browser mengakses modul perangkat keras kamera kamu.
+              </span>
             </div>
           )}
         </div>
