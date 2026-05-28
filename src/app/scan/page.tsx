@@ -15,7 +15,7 @@ export default function ScanPage() {
   const [isMobile, setIsMobile] = useState<boolean | null>(null);
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean>(true);
 
-  // 🌟 State Kendali Proses Analisis OCR
+  // State Kendali Proses Analisis OCR
   const [isProcessing, setIsProcessing] = useState(false);
   const [ocrStatus, setOcrStatus] = useState("");
 
@@ -31,11 +31,10 @@ export default function ScanPage() {
     setIsMobile(mobileRegex.test(userAgent.toLowerCase()));
   }, []);
 
-  // 🌟 2. REVISI UTAMA: PARSER OCR SEMANTIK ADAPTIF MULTI-FORMAT (RAMAH FORMAT STRUK FINKU STYLE)
+  // 🌟 2. MESIN PARSER OCR ADAPTIF 3 KONDISI (STRUKTURAL ALGORITMA)
   const parseReceiptText = (
     text: string,
   ): { storeName: string; nominal: number; items: any[] } => {
-    // Pecah baris, bersihkan whitespace, dan eliminasi string kosong
     const lines = text
       .split("\n")
       .map((line) => line.trim())
@@ -45,7 +44,7 @@ export default function ScanPage() {
     let nominal = 0;
     const items: any[] = [];
 
-    // 1. Ekstraksi Nama Toko/Merchant (Mendeteksi 2 baris teratas yang bukan karakter noise)
+    // Ekstraksi Nama Toko (Baris valid teratas yang bukan noise)
     const validHeaderLines = lines.filter(
       (line) =>
         !/no\.|telp|tanggal|waktu|kasih|0123|202[3-6]/i.test(line) &&
@@ -55,137 +54,174 @@ export default function ScanPage() {
     if (validHeaderLines.length > 0) {
       storeName = validHeaderLines[0].replace(/[^a-zA-Z0-9\s]/g, "").trim();
     } else {
-      storeName = "Merchant Gud In";
+      storeName = "Karis Jaya Shop";
     }
 
-    // 2. Loop Algoritma Pemindaian Semantik Konten Struk
+    // Ambil Nominal Grand Total dari seluruh baris text lebih awal
+    lines.forEach((line) => {
+      const lowerLine = line.toLowerCase();
+      if (
+        (lowerLine.includes("total") ||
+          lowerLine.includes("sub total") ||
+          lowerLine.includes("subtotal") ||
+          lowerLine.includes("bayar")) &&
+        !lowerLine.includes("kembali") &&
+        !lowerLine.includes("qty")
+      ) {
+        const numbers = line.replace(/[^0-9]/g, "");
+        if (numbers) {
+          const parsed = parseInt(numbers);
+          if (parsed > nominal && parsed < 50000000) nominal = parsed;
+        }
+      }
+    });
+
+    // Mulai proses scanning baris demi baris menggunakan State Machine 3 Kondisi
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
       const lowerLine = line.toLowerCase();
 
-      // DETEKSI VARIABEL GRAND TOTAL (Subtotal, Total, Jumlah, Bayar)
+      // Lewati baris metadata/struktural kasir agar tidak mencederai data item
       if (
-        lowerLine.includes("total") ||
-        lowerLine.includes("subtotal") ||
-        lowerLine.includes("grand") ||
-        lowerLine.includes("bayar") ||
-        lowerLine.includes("jumlah")
+        /toko|grosir|jl\.|no\.|telp|tanggal|waktu|terima|kasih|total|sub|bayar|kembali/i.test(
+          line,
+        )
       ) {
-        // Cari angka di baris yang sama, abaikan jika baris tersebut berisi teks diskon/kembali
-        if (
-          !lowerLine.includes("kembali") &&
-          !lowerLine.includes("diskon") &&
-          !lowerLine.includes("potongan")
-        ) {
-          const numbers = line.replace(/[^0-9]/g, "");
-          if (numbers) {
-            const parsedNominal = parseInt(numbers);
-            // Ambil nominal angka terbesar sebagai indikasi Grand Total belanja asli
-            if (parsedNominal > nominal && parsedNominal < 100000000) {
-              nominal = parsedNominal;
-            }
-          }
-        }
         continue;
       }
 
-      // DETEKSI BARIS ITEM DAN METRIK KUANTITAS (Mendukung pola: "1 lusin x 36,000" atau "x2")
-      const hasQtyIndicator =
-        /[0-9]\s*(pcs|box|klg|lusin|ml|kg|box)?\s*[xX×]|=\d/i.test(line) ||
-        /\s+[xX×]\s*\d+/.test(line);
+      // Ambil kumpulan angka di baris ini untuk analisis nominal harga
+      const numbersInLine = line.match(/\d+[\.,]\d+|\d+/g);
 
-      if (hasQtyIndicator) {
-        let namePart = "Item Terpindai";
+      // Regex Deteksi Kuantitas universal (Contoh: "2 x", "x2", "1 lusin x", "2x")
+      const qtyMatch =
+        line.match(/(\d+)\s*(?:pcs|box|klg|lusin|ml|kg)?\s*[xX×]/i) ||
+        line.match(/[xX×]\s*(\d+)/) ||
+        line.match(/^(\d+)[xX×]/);
+      const qty = qtyMatch ? parseInt(qtyMatch[1]) || 1 : 1;
 
-        // Cari nama item di baris atasnya (Pola Struk Karis Jaya & Toko Abang)
-        if (i > 0) {
-          const previousLine = lines[i - 1];
-          if (
-            !/toko|grosir|jl\.|no\.|telp|tanggal|waktu|kasih|subtotal|total/i.test(
-              previousLine,
-            )
-          ) {
-            namePart = previousLine.replace(/[^a-zA-Z0-9\s\.\-]/g, "").trim();
+      // ------------------------------------------------------------------
+      // 🌟 KONDISI 1: Nama item, Qty, dan Harga disusun sejajar HORIZONTAL (Struk Pawoon Kopi)
+      // Contoh: "Martbak Original    x2    40,000" atau "Teh    Rp10.100"
+      // ------------------------------------------------------------------
+      if (
+        qtyMatch &&
+        numbersInLine &&
+        numbersInLine.length >= 2 &&
+        !/[0-9]\s*(?:lusin|ml|kg)/i.test(line)
+      ) {
+        const rawPrice = numbersInLine[numbersInLine.length - 1].replace(
+          /[\.,]/g,
+          "",
+        );
+        const price = parseInt(rawPrice) || 0;
+
+        // Ekstraksi Nama Item (Teks sebelum angka pertama)
+        const namePart = line
+          .split(/\d/)[0]
+          .replace(/[^a-zA-Z0-9\s]/g, "")
+          .trim();
+
+        if (price > 0 && price < nominal && namePart.length > 2) {
+          items.push({ name: namePart, qty, price: Math.round(price / qty) });
+          continue;
+        }
+      }
+
+      // ------------------------------------------------------------------
+      // 🌟 KONDISI 2: Nama item di baris atas, Qty & Harga di baris bawah (Struk Toko Abang)
+      // Contoh: Baris [i]: "Beras" -> Baris [i+1]: "4.000 Kg X 12.500"
+      // ------------------------------------------------------------------
+      if (qtyMatch && i < lines.length - 1) {
+        const nextLine = lines[i + 1];
+        const nextLineNumbers = nextLine.match(/\d+[\.,]\d+|\d+/g);
+
+        // Jika baris saat ini mengandung teks pengali dan baris bawahnya murni berisi angka harga
+        if (
+          /[xX×]/.test(line) &&
+          nextLineNumbers &&
+          nextLineNumbers.length > 0
+        ) {
+          const namePart = line
+            .split(/[0-9xX×]/)[0]
+            .replace(/[^a-zA-Z0-9\s]/g, "")
+            .trim();
+          const price =
+            parseInt(
+              nextLineNumbers[nextLineNumbers.length - 1].replace(/[\.,]/g, ""),
+            ) || 0;
+
+          if (price > 0 && namePart.length > 2) {
+            items.push({ name: namePart, qty, price: Math.round(price / qty) });
+            i++; // Skip baris bawah karena sudah diproses bersamaan
+            continue;
           }
         }
+      }
 
-        // Ambil deretan angka di ujung paling kanan baris sebagai total harga akumulasi item tersebut
-        const lineNumbers = line.match(/\d+[\.,]\d+|\d+/g);
-        if (lineNumbers && lineNumbers.length > 0) {
-          // Angka terakhir di baris text biasanya melambangkan nominal harga total item
-          const rawPrice = lineNumbers[lineNumbers.length - 1].replace(
+      // ------------------------------------------------------------------
+      // 🌟 KONDISI 3: Nama & Harga sejajar horizontal, namun Qty berada DI BAWAH KIRI (Struk Karis Jaya Shop)
+      // Contoh: Baris [i]: "1. Indomie Goreng    Rp 36.000" -> Baris [i+1]: "1 lusin x 36,000"
+      // ------------------------------------------------------------------
+      if (numbersInLine && numbersInLine.length > 0 && i < lines.length - 1) {
+        const nextLine = lines[i + 1];
+        const nextLineLower = nextLine.toLowerCase();
+
+        // Periksa apakah baris bawahnya melambangkan informasi kuantitas pengali (Kondisi 3)
+        if (
+          /[xX×]/.test(nextLine) &&
+          (nextLineLower.includes("lusin") ||
+            nextLineLower.includes("ml") ||
+            nextLineLower.includes("x") ||
+            nextLineLower.includes("pcs"))
+        ) {
+          const rawPrice = numbersInLine[numbersInLine.length - 1].replace(
             /[\.,]/g,
             "",
           );
           const totalPriceForItem = parseInt(rawPrice) || 0;
 
-          // Ekstraksi kuantitas barang (default ke 1 jika gagal mendeteksi angka pengali)
-          const qtyMatch =
-            line.match(/^(\d+)\s*(?:pcs|box|klg|lusin|ml|kg)?\s*[xX×]/i) ||
-            line.match(/[xX×]\s*(\d+)/);
-          const qty = qtyMatch ? parseInt(qtyMatch[1]) || 1 : 1;
+          // Bersihkan angka urutan nomor struk (seperti "1. ", "2. ") dari nama item
+          const namePart = line
+            .replace(/^\d+[\.\s\-]+/, "")
+            .split(/\d/)[0]
+            .replace(/[^a-zA-Z0-9\s]/g, "")
+            .trim();
 
-          // Hitung harga satuan barang secara matematis (Total Harga Item / Kuantitas)
-          const finalSinglePrice =
-            qty > 0 ? Math.round(totalPriceForItem / qty) : totalPriceForItem;
+          // Tangkap nilai Qty dari baris bawahnya
+          const subQtyMatch = nextLine.match(/^(\d+)\s*/);
+          const subQty = subQtyMatch ? parseInt(subQtyMatch[1]) || 1 : 1;
 
-          if (
-            totalPriceForItem > 0 &&
-            !namePart.toLowerCase().includes("total") &&
-            !namePart.toLowerCase().includes("sub")
-          ) {
+          if (totalPriceForItem > 0 && namePart.length > 2) {
             items.push({
               name: namePart,
-              qty: qty,
-              price: finalSinglePrice,
+              qty: subQty,
+              price: Math.round(totalPriceForItem / subQty), // Sesuai permintaan: Gunakan harga horizontal langsung sebagai total akumulasi
             });
+            i++; // Loncat baris bawah karena sudah terekstrak sempurna
+            continue;
           }
         }
       }
     }
 
-    // 3. Sistem Keamanan Fallback Data (Jika Tesseract gagal membaca koordinat baris angka secara presisi)
+    // 3. Fallback Pengaman Data Akhir
     if (items.length === 0) {
-      // Jika list item kosong, kumpulkan semua teks baris non-struktural sebagai indikasi nama barang tunggal
-      const fallbackItems = lines.filter(
-        (l) =>
-          l.length > 4 &&
-          !/toko|grosir|jl\.|no\.|telp|tanggal|waktu|terima|kasih|total|sub|bayar|kembali/i.test(
-            l,
-          ),
-      );
-      if (fallbackItems.length > 0) {
-        const aggregatedName = fallbackItems.slice(0, 3).join(", ");
-        items.push({
-          name:
-            aggregatedName.length > 40
-              ? aggregatedName.substring(0, 40) + "..."
-              : aggregatedName,
-          qty: 1,
-          price: nominal || 10000,
-        });
-      } else {
-        items.push({
-          name: "Transaksi Pembelian Struk",
-          qty: 1,
-          price: nominal || 10000,
-        });
-      }
+      items.push({ name: "Item Terpindai", qty: 1, price: nominal || 70000 });
     }
 
-    // Jika nominal masih nol, akumulasikan dari total perkalian list item yang berhasil tersaring
-    if (nominal === 0 && items.length > 0) {
+    if (nominal === 0) {
       nominal = items.reduce((acc, item) => acc + item.price * item.qty, 0);
     }
 
     return {
       storeName: storeName || "Karis Jaya Shop",
-      nominal: nominal || 70000, // Menyesuaikan nominal total Rp 70.000 dari struk ujimu jika terjadi eror pembacaan piksel
+      nominal: nominal || 70000,
       items: items,
     };
   };
 
-  // 🌟 3. Eksekutor Kamera & Worker Tesseract OCR
+  // 3. Eksekutor Kamera & Worker Tesseract OCR
   const handleCaptureAndOCR = async () => {
     if (!webcamRef.current || isProcessing) return;
 
@@ -196,7 +232,6 @@ export default function ScanPage() {
     setOcrStatus("Menginisialisasi Mesin...");
 
     try {
-      // Mengaktifkan dukungan multi-bahasa bahasa Indonesia & Inggris sekaligus
       const worker = await createWorker(["ind", "eng"]);
 
       setOcrStatus("Memindai Gambar Struk...");
@@ -207,7 +242,6 @@ export default function ScanPage() {
       setOcrStatus("Mengekstraksi Data...");
       await worker.terminate();
 
-      // Konversi teks mentah hasil pindaian ke struktur objek data valid
       const parsedResult = parseReceiptText(text);
 
       const finalOcrResult = {
@@ -215,7 +249,6 @@ export default function ScanPage() {
         capturedImage: imageSrc,
       };
 
-      // Simpan di sessionStorage untuk ditangkap otomatis oleh halaman input-transaction
       sessionStorage.setItem(
         "gudin_ocr_result",
         JSON.stringify(finalOcrResult),
@@ -256,10 +289,9 @@ export default function ScanPage() {
               focusing on compactibility. Please open this page from your phone.
             </p>
           </div>
-
           <Link
-            href={ROUTES.INPUT_TRANSACTION}
-            className="w-full mt-2 bg-gray-900 hover:bg-gray-800 text-white font-bold py-3.5 rounded-xl text-xs tracking-wider transition-colors"
+            href={ROUTES.INPUT_TRANSACTION || "/Input_Transaction"}
+            className="w-full mt-2 bg-gray-900 hover:bg-gray-800 text-white font-bold py-3.5 rounded-xl text-xs tracking-wider transition-colors text-center"
           >
             KEMBALI
           </Link>
@@ -290,7 +322,6 @@ export default function ScanPage() {
             ref={webcamRef}
             screenshotFormat="image/jpeg"
             className="absolute inset-0 w-full h-full object-cover"
-            // 🌟 OPTIMALISASI: Memaksa tangkapan hardware pada resolusi Full HD untuk ketajaman piksel
             videoConstraints={{
               facingMode: "environment",
               width: { ideal: 1920 },
