@@ -60,3 +60,10 @@ Once initialized, map your loopback address via browser at: http://localhost:300
 ```bash
 npm run build
 ```
+
+### 4. Local Production Simulation
+Test the production-ready optimized build locally inside an isolated network runner environment:
+
+```bash
+npm run start
+```
